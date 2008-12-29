@@ -4517,105 +4517,6 @@ vte_terminal_send(VteTerminal *terminal, const char *encoding,
 	return;
 }
 
-static void
-vte_terminal_echo(VteTerminal *terminal, const void *data, gssize length)
-{
-	gsize icount, ocount;
-	const guchar *ibuf;
-	guchar *obuf, *obufptr;
-	gchar *cooked;
-	VteConv conv;
-	long crcount, cooked_length, i;
-
-	g_assert(VTE_IS_TERMINAL(terminal));
-
-	conv = terminal->pvt->outgoing_conv;
-	if (conv == VTE_INVALID_CONV) {
-		g_warning (_("Unable to send data to child, invalid charset convertor"));
-		return;
-	}
-
-	icount = length;
-	ibuf =  data;
-	ocount = ((length + 1) * VTE_UTF8_BPC) + 1;
-	_vte_buffer_set_minimum_size(terminal->pvt->conv_buffer, ocount);
-	obuf = obufptr = terminal->pvt->conv_buffer->bytes;
-
-	if (_vte_conv(conv, &ibuf, &icount, &obuf, &ocount) == (gsize)-1) {
-		g_warning(_("Error (%s) converting data for child, dropping."),
-			  g_strerror(errno));
-	} else {
-		crcount = 0;
-		if (crcount > 0) {
-			cooked = g_malloc(obuf - obufptr + crcount);
-			cooked_length = 0;
-			for (i = 0; i < obuf - obufptr; i++) {
-				switch (obufptr[i]) {
-				case '\015':
-					cooked[cooked_length++] = '\015';
-					cooked[cooked_length++] = '\012';
-					break;
-				default:
-					cooked[cooked_length++] = obufptr[i];
-					break;
-				}
-			}
-		} else {
-			cooked = (gchar *)obufptr;
-			cooked_length = obuf - obufptr;
-		}
-		if (cooked_length > 0) {
-			gunichar *ucs4;
-      /* Tell observers that we're sending this to the child. */
-			vte_terminal_emit_commit(terminal,
-						 cooked, cooked_length);
-			ucs4 = g_utf8_to_ucs4(cooked, cooked_length,
-					      NULL, NULL, NULL);
-			if (ucs4 != NULL) {
-				int len;
-				len = g_utf8_strlen(cooked, cooked_length);
-				for (i = 0; i < len; i++) {
-					_vte_terminal_insert_char(terminal,
-								 ucs4[i],
-								 FALSE,
-								 TRUE);
-				}
-				g_free(ucs4);
-			}
-		}
-		/* If there's a place for it to go, add the data to the
-		 * outgoing buffer. */
-
-/*		if ((cooked_length > 0) && (terminal->pvt->pty_master != -1)) {*/
-/*			_vte_buffer_append(terminal->pvt->outgoing,*/
-/*					   cooked, cooked_length);*/
-/*			_VTE_DEBUG_IF(VTE_DEBUG_KEYBOARD) {*/
-/*				for (i = 0; i < cooked_length; i++) {*/
-/*					if ((((guint8) cooked[i]) < 32) ||*/
-/*					    (((guint8) cooked[i]) > 127)) {*/
-/*						g_printerr(*/
-/*							"Sending <%02x> "*/
-/*							"to child.\n",*/
-/*							cooked[i]);*/
-/*					} else {*/
-/*						g_printerr(*/
-/*							"Sending '%c' "*/
-/*							"to child.\n",*/
-/*							cooked[i]);*/
-/*					}*/
-/*				}*/
-/*			}*/
-/*			/* If we need to start waiting for the child pty to*/
-/*			 * become available for writing, set that up here. */
-/*			_vte_terminal_connect_pty_write(terminal);*/
-/*		}*/
-		if (crcount > 0) {
-			g_free(cooked);
-		}
-	}
-	return;
-}
-
 /**
  * vte_terminal_feed_child:
  * @terminal: a #VteTerminal
@@ -4690,7 +4591,7 @@ vte_terminal_im_commit(GtkIMContext *im_context, gchar *text, VteTerminal *termi
 {
 	_vte_debug_print(VTE_DEBUG_EVENTS,
 			"Input method committed `%s'.\n", text);
-  vte_terminal_echo(terminal, text, strlen(text));
+  vte_terminal_feed(terminal, text, strlen(text));
 	/* Committed text was committed because the user pressed a key, so
 	 * we need to obey the scroll-on-keystroke setting. */
 	if (terminal->pvt->scroll_on_keystroke) {
