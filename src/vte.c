@@ -4690,7 +4690,7 @@ vte_terminal_im_commit(GtkIMContext *im_context, gchar *text, VteTerminal *termi
 {
 	_vte_debug_print(VTE_DEBUG_EVENTS,
 			"Input method committed `%s'.\n", text);
-	vte_terminal_feed_child_using_modes(terminal, text, -1);
+  vte_terminal_echo(terminal, text, strlen(text));
 	/* Committed text was committed because the user pressed a key, so
 	 * we need to obey the scroll-on-keystroke setting. */
 	if (terminal->pvt->scroll_on_keystroke) {
