@@ -4,7 +4,7 @@ EXTRA_DIST = iso2022.txt
 
 # The library
 
-pkginclude_HEADERS = pty.h reaper.h vte.h vteaccess.h vtetypebuiltins.h vteversion.h
+pkginclude_HEADERS = reaper.h vte.h vteaccess.h vtetypebuiltins.h vteversion.h
 
 lib_LTLIBRARIES = libvte.la
 
@@ -44,8 +44,6 @@ libvte_la_SOURCES = \
 	marshal.h \
 	matcher.c \
 	matcher.h \
-	pty.c \
-	pty.h \
 	reaper.c \
 	reaper.h \
 	ring.c \
@@ -160,7 +158,7 @@ EXTRA_DIST += $(pkglib_SCRIPTS)
 TEST_SH = check-doc-syntax.sh
 EXTRA_DIST += $(TEST_SH)
 
-check_PROGRAMS = buffer dumpkeys iso2022 pty reaper reflect-text-view reflect-vte ring mev ssfe table trie xticker vteconv vtetc
+check_PROGRAMS = buffer dumpkeys iso2022 reaper reflect-text-view reflect-vte ring mev ssfe table trie xticker vteconv vtetc
 TESTS = buffer ring table trie $(TEST_SH)
 
 AM_CFLAGS = $(GLIB_CFLAGS) $(GOBJECT_CFLAGS)
@@ -279,9 +277,6 @@ trie_LDADD = $(VTE_LIBS)
 
 vtetc_SOURCES = vtetc.c vtetc.h debug.c debug.h
 vtetc_CPPFLAGS = -DTERMCAP_MAIN
-
-pty_SOURCES = pty.c pty.h debug.c debug.h
-pty_CPPFLAGS = -DPTY_MAIN -DLIBEXECDIR='"$(libexecdir)"'
 
 reaper_SOURCES = reaper.c reaper.h debug.c debug.h marshal.c marshal.h
 reaper_CPPFLAGS =  -DREAPER_MAIN -DLOCALEDIR='"$(localedir)"'
