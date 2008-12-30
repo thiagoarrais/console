@@ -286,43 +286,6 @@ fi
 AC_CHECK_FUNC(floor,,AC_CHECK_LIB(m,floor,LIBS=["$LIBS -lm"]))
 AC_CHECK_FUNCS([ceil floor])
 
-# Look for tgetent
-
-AC_CHECK_FUNC([tgetent],[vte_cv_termcap_lib=libc],
-  [AC_CHECK_LIB([ncurses],[tgetent],[vte_cv_termcap_lib=libncurses],
-    [AC_CHECK_LIB([tinfo],[tgetent],[vte_cv_termcap_lib=libtinfo],
-      [AC_CHECK_LIB([curses],[tgetent],[vte_cv_termcap_lib=libcurses],
-        [AC_CHECK_LIB([termcap],[tgetent],[vte_cv_termcap_lib=libtermcap],
-          [vte_cv_termcap_lib=])])])])])
-
-case "$vte_cv_termcap_lib" in
-  libc)       # FIXME: which headers to include here?
-              ;;
-  libncurses) # We need ncurses.h and term.h, or ncurses/curses.h and ncurses/term.h
-              AC_CHECK_HEADERS([ncurses.h term.h],[],
-                [AC_CHECK_HEADERS([ncurses/curses.h ncurses/term.h],[],
-                  [AC_MSG_ERROR([ncurses headers not found])])])
-              LIBS="-lncurses $LIBS"
-              ;;
-  libtinfo)   # Need ncurses/curses.h and ncurses/term.h
-              AC_CHECK_HEADERS([ncurses.h term.h],[],
-                [AC_CHECK_HEADERS([ncurses/curses.h ncurses/term.h],[],
-                  [AC_MSG_ERROR([ncurses headers not found])])])
-              LIBS="-ltinfo $LIBS"
-              ;;
-  libcurses)  # Need curses.h and term.h
-              AC_CHECK_HEADERS([curses.h term.h],[],
-                [AC_MSG_ERROR([curses headers not found])])
-              LIBS="-lncurses $LIBS"
-              ;;
-  libtermcap) # Need termcap.h
-              AC_CHECK_HEADERS([termcap.h],[],
-                [AC_MSG_ERROR([termcap headers not found])])
-              LIBS="-ltermcap $LIBS"
-              ;;
-  *)          AC_MSG_ERROR([tgetent not found in any library]) ;;
-esac
-
 # Search for the required modules.
 VTE_PKGS="glib-2.0 >= $GLIB_REQUIRED gobject-2.0 pango >= $PANGO_REQUIRED gtk+-2.0 >= $GTK_REQUIRED"
 PKG_CHECK_MODULES([VTE],[$VTE_PKGS])
