@@ -3286,82 +3286,6 @@ not_inserted:
 	return line_wrapped;
 }
 
-/* Catch a VteReaper child-exited signal, and if it matches the one we're
- * looking for, emit one of our own. */
-static void
-vte_terminal_catch_child_exited(VteReaper *reaper, int pid, int status,
-				VteTerminal *terminal)
-{
-	if (pid == terminal->pvt->pty_pid) {
-                GObject *object = G_OBJECT(terminal);
-
-                g_object_ref(object);
-                g_object_freeze_notify(object);
-
-		_VTE_DEBUG_IF (VTE_DEBUG_LIFECYCLE) {
-			g_printerr ("Child[%d] exited with status %d\n",
-					pid, status);
-#ifdef HAVE_SYS_WAIT_H
-			if (WIFEXITED (status)) {
-				g_printerr ("Child[%d] exit code %d.\n",
-						pid, WEXITSTATUS (status));
-			}else if (WIFSIGNALED (status)) {
-				g_printerr ("Child[%d] dies with signal %d.\n",
-						pid, WTERMSIG (status));
-			}
-#endif
-		}
-		/* Disconnect from the reaper. */
-		if (terminal->pvt->pty_reaper != NULL) {
-			g_signal_handlers_disconnect_by_func(terminal->pvt->pty_reaper,
-							     vte_terminal_catch_child_exited,
-							     terminal);
-			g_object_unref(terminal->pvt->pty_reaper);
-			terminal->pvt->pty_reaper = NULL;
-		}
-		terminal->pvt->pty_pid = -1;
-
-		/* Close out the PTY. */
-		//_vte_terminal_disconnect_pty_read(terminal);
-		//_vte_terminal_disconnect_pty_write(terminal);
-		if (terminal->pvt->pty_channel != NULL) {
-			g_io_channel_unref (terminal->pvt->pty_channel);
-			terminal->pvt->pty_channel = NULL;
-		}
-		if (terminal->pvt->pty_master != -1) {
-			//_vte_pty_close(terminal->pvt->pty_master);
-			close(terminal->pvt->pty_master);
-			terminal->pvt->pty_master = -1;
-                
-                        g_object_notify(object, "pty");
-		}
-
-		/* Take one last shot at processing whatever data is pending,
-		 * then flush the buffers in case we're about to run a new
-		 * command, disconnecting the timeout. */
-		if (terminal->pvt->incoming != NULL) {
-			vte_terminal_process_incoming(terminal);
-			_vte_incoming_chunks_release (terminal->pvt->incoming);
-			terminal->pvt->incoming = NULL;
-			terminal->pvt->input_bytes = 0;
-		}
-		g_array_set_size(terminal->pvt->pending, 0);
-		vte_terminal_stop_processing (terminal);
-
-		/* Clear the outgoing buffer as well. */
-		_vte_buffer_clear(terminal->pvt->outgoing);
-
-		/* Tell observers what's happened. */
-                terminal->pvt->child_exit_status = status;
-		vte_terminal_emit_child_exited(terminal);
-
-                g_object_thaw_notify(object);
-                g_object_unref(object);
-
-                /* Note: terminal may be destroyed at this point */
-	}
-}
-
 static void mark_input_source_invalid(VteTerminal *terminal)
 {
 	_vte_debug_print (VTE_DEBUG_IO, "removed poll of vte_terminal_io_read\n");
@@ -3385,7 +3309,6 @@ _vte_terminal_fork_basic(VteTerminal *terminal, const char *command,
 	char **env_add;
 	int i, fd;
 	pid_t pid;
-	VteReaper *reaper;
 
         g_object_freeze_notify(object);
 
@@ -3430,23 +3353,6 @@ _vte_terminal_fork_basic(VteTerminal *terminal, const char *command,
 		terminal->pvt->pty_pid = pid;
 
 		vte_terminal_set_pty (terminal, fd);
-
-		/* Catch a child-exited signal from the child pid. */
-		reaper = vte_reaper_get();
-		vte_reaper_add_child(pid);
-		if (reaper != terminal->pvt->pty_reaper) {
-			if (terminal->pvt->pty_reaper != NULL) {
-				g_signal_handlers_disconnect_by_func(terminal->pvt->pty_reaper,
-						vte_terminal_catch_child_exited,
-						terminal);
-				g_object_unref(terminal->pvt->pty_reaper);
-			}
-			g_signal_connect(reaper, "child-exited",
-					G_CALLBACK(vte_terminal_catch_child_exited),
-					terminal);
-			terminal->pvt->pty_reaper = reaper;
-		} else
-			g_object_unref(reaper);
 	}
 
 	/* Clean up. */
@@ -8325,14 +8231,6 @@ vte_terminal_finalize(GObject *object)
 	if (terminal->pvt->outgoing_conv != VTE_INVALID_CONV) {
 		_vte_conv_close(terminal->pvt->outgoing_conv);
 		terminal->pvt->outgoing_conv = VTE_INVALID_CONV;
-	}
-
-	/* Stop listening for child-exited signals. */
-	if (terminal->pvt->pty_reaper != NULL) {
-		g_signal_handlers_disconnect_by_func(terminal->pvt->pty_reaper,
-						     vte_terminal_catch_child_exited,
-						     terminal);
-		g_object_unref(terminal->pvt->pty_reaper);
 	}
 
 	/* Stop processing input. */

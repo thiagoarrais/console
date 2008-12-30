@@ -4,7 +4,7 @@ EXTRA_DIST = iso2022.txt
 
 # The library
 
-pkginclude_HEADERS = reaper.h vte.h vteaccess.h vtetypebuiltins.h vteversion.h
+pkginclude_HEADERS = vte.h vteaccess.h vtetypebuiltins.h vteversion.h
 
 lib_LTLIBRARIES = libvte.la
 
@@ -44,8 +44,6 @@ libvte_la_SOURCES = \
 	marshal.h \
 	matcher.c \
 	matcher.h \
-	reaper.c \
-	reaper.h \
 	ring.c \
 	ring.h \
 	table.c \
@@ -158,7 +156,7 @@ EXTRA_DIST += $(pkglib_SCRIPTS)
 TEST_SH = check-doc-syntax.sh
 EXTRA_DIST += $(TEST_SH)
 
-check_PROGRAMS = buffer dumpkeys iso2022 reaper reflect-text-view reflect-vte ring mev ssfe table trie xticker vteconv vtetc
+check_PROGRAMS = buffer dumpkeys iso2022 reflect-text-view reflect-vte ring mev ssfe table trie xticker vteconv vtetc
 TESTS = buffer ring table trie $(TEST_SH)
 
 AM_CFLAGS = $(GLIB_CFLAGS) $(GOBJECT_CFLAGS)
@@ -277,9 +275,6 @@ trie_LDADD = $(VTE_LIBS)
 
 vtetc_SOURCES = vtetc.c vtetc.h debug.c debug.h
 vtetc_CPPFLAGS = -DTERMCAP_MAIN
-
-reaper_SOURCES = reaper.c reaper.h debug.c debug.h marshal.c marshal.h
-reaper_CPPFLAGS =  -DREAPER_MAIN -DLOCALEDIR='"$(localedir)"'
 
 vteconv_SOURCES = buffer.c buffer.h debug.c debug.h vteconv.c vteconv.h
 vteconv_CPPFLAGS = -DVTECONV_MAIN
