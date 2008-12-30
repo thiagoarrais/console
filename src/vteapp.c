@@ -20,7 +20,6 @@
 #include <config.h>
 
 #include <stdlib.h>
-#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -454,11 +453,6 @@ main(int argc, char **argv)
 	GdkColormap *colormap;
 	GtkWidget *window, *widget,*hbox = NULL, *scrollbar, *scrolled_window = NULL;
 	VteTerminal *terminal;
-	char *env_add[] = {
-#ifdef VTE_DEBUG
-		"FOO=BAR", "BOO=BIZ",
-#endif
-		NULL};
 	const char *background = NULL;
 	gboolean transparent = FALSE, audible = TRUE, blink = TRUE,
 		 debug = FALSE, dingus = FALSE, dbuffer = TRUE,
@@ -470,7 +464,6 @@ main(int argc, char **argv)
         int scrollbar_policy = 0;
         char *geometry = NULL;
 	gint lines = 100;
-	const char *message = "Launching interactive shell...\r\n";
 	const char *font = NULL;
 	const char *termcap = NULL;
 	const char *command = NULL;
@@ -612,8 +605,7 @@ main(int argc, char **argv)
 			G_OPTION_ARG_NONE, &show_object_notifications,
 			"Print VteTerminal object notifications",
 			NULL
-		},
-		{ NULL }
+		}
 	};
 	GOptionContext *context;
 	GError *error = NULL;
