@@ -206,21 +206,7 @@ GType vte_terminal_get_type(void);
 							     VTE_TYPE_TERMINAL)
 #define VTE_TERMINAL_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), VTE_TYPE_TERMINAL, VteTerminalClass))
 
-/* You can get by with just these two functions. */
 GtkWidget *vte_terminal_new(void);
-pid_t vte_terminal_fork_command(VteTerminal *terminal,
-				const char *command, char **argv,
-				char **envv, const char *directory,
-				gboolean lastlog,
-				gboolean utmp,
-				gboolean wtmp);
-
-/* Users of libzvt may find this useful. */
-pid_t vte_terminal_forkpty(VteTerminal *terminal,
-			   char **envv, const char *directory,
-			   gboolean lastlog,
-			   gboolean utmp,
-			   gboolean wtmp);
 
 /* Send data to the terminal to display, or to the terminal's forked command
  * to handle in some way.  If it's 'cat', they should be the same. */

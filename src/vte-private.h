@@ -19,7 +19,6 @@
 #ifndef vte_vte_private_h_included
 #define vte_vte_private_h_included
 
-#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -30,7 +29,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <math.h>
-#include <pwd.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

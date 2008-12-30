@@ -849,57 +849,6 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (!console) {
-		if (shell) {
-			/* Launch a shell. */
-			_VTE_DEBUG_IF(VTE_DEBUG_MISC)
-				vte_terminal_feed(terminal, message, -1);
-			vte_terminal_fork_command(terminal,
-						  command, NULL, env_add,
-						  working_directory,
-						  TRUE, TRUE, TRUE);
-	#ifdef VTE_DEBUG
-			if (command == NULL) {
-				vte_terminal_feed_child(terminal,
-							"pwd\n", -1);
-			}
-	#endif
-		} else {
-			long i;
-			i = vte_terminal_forkpty(terminal,
-						 env_add, working_directory,
-						 TRUE, TRUE, TRUE);
-			switch (i) {
-			case -1:
-				/* abnormal */
-				g_warning("Error in vte_terminal_forkpty(): %s",
-					  strerror(errno));
-				break;
-			case 0:
-				/* child */
-				for (i = 0; ; i++) {
-					switch (i % 3) {
-					case 0:
-					case 1:
-						g_print("%ld\n", i);
-						break;
-					case 2:
-						g_printerr("%ld\n", i);
-						break;
-					}
-					sleep(1);
-				}
-				_exit(0);
-				break;
-			default:
-				g_print("Child PID is %ld (mine is %ld).\n",
-					(long) i, (long) getpid());
-				/* normal */
-				break;
-			}
-		}
-	}
-
 	/* Go for it! */
 	add_weak_pointer(G_OBJECT(widget), &widget);
 	add_weak_pointer(G_OBJECT(window), &window);
