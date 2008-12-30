@@ -8082,17 +8082,6 @@ vte_terminal_finalize(GObject *object)
 	g_array_free(terminal->pvt->pending, TRUE);
 	_vte_buffer_free(terminal->pvt->conv_buffer);
 
-	/* Stop the child and stop watching for input from the child. */
-	if (terminal->pvt->pty_pid != -1) {
-#ifdef HAVE_GETPGID
-		pid_t pgrp;
-		pgrp = getpgid(terminal->pvt->pty_pid);
-		if (pgrp != -1) {
-			kill(-pgrp, SIGHUP);
-		}
-#endif
-		kill(terminal->pvt->pty_pid, SIGHUP);
-	}
 	//_vte_terminal_disconnect_pty_read(terminal);
 	//_vte_terminal_disconnect_pty_write(terminal);
 	if (terminal->pvt->pty_channel != NULL) {
@@ -13079,12 +13068,6 @@ vte_terminal_set_pty(VteTerminal *terminal, int pty_master)
        terminal->pvt->pty_channel = g_io_channel_unix_new (pty_master);
        g_io_channel_set_close_on_unref (terminal->pvt->pty_channel, FALSE);
 
-
-       /* Set the pty to be non-blocking. */
-       flags = fcntl (terminal->pvt->pty_master, F_GETFL);
-       if ((flags & O_NONBLOCK) == 0) {
-	       fcntl (terminal->pvt->pty_master, F_SETFL, flags | O_NONBLOCK);
-       }
 
        vte_terminal_set_size (terminal,
                               terminal->column_count,
