@@ -390,8 +390,14 @@ take_xconsole_ownership(GtkWidget *widget, gpointer data)
 		{"STRING", 0, 0},
 	};
 
-	memset(hostname, '\0', sizeof(hostname));
-	gethostname(hostname, sizeof(hostname) - 1);
+  hostname[0] = 'h';
+  hostname[1] = 'o';
+  hostname[2] = 's';
+  hostname[3] = 't';
+  hostname[4] = 'n';
+  hostname[5] = 'a';
+  hostname[6] = 'm';
+  hostname[7] = 'e';
 
 	name = g_strdup_printf("MIT_CONSOLE_%s", hostname);
 	atom = gdk_atom_intern(name, FALSE);
@@ -808,7 +814,7 @@ main(int argc, char **argv)
 		/* Open a "console" connection. */
 		int consolefd = -1, yes = 1, watch;
 		GIOChannel *channel;
-		consolefd = open("/dev/console", O_RDONLY | O_NOCTTY);
+		consolefd = open("/dev/console", O_RDONLY);
 		if (consolefd != -1) {
 			/* Assume failure. */
 			console = FALSE;
@@ -867,12 +873,6 @@ main(int argc, char **argv)
 
 	g_assert(widget == NULL);
 	g_assert(window == NULL);
-
-	if (keep) {
-		while (TRUE) {
-			sleep(60);
-		}
-	}
 
 	return 0;
 }
