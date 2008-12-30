@@ -47,6 +47,10 @@ typedef gunichar wint_t;
 #define TRIE_MAYBE_STATIC
 #endif
 
+#ifndef LINE_MAX
+#define LINE_MAX 2048
+#endif
+
 /* Structures and whatnot for tracking character classes. */
 struct char_class_data {
 	gunichar c;			/* A character. */
