@@ -4809,18 +4809,9 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 {
 	VteTerminal *terminal;
 	GdkModifierType modifiers;
-	struct _vte_termcap *termcap;
-	const char *tterm;
-	char *normal = NULL, *output;
-	gssize normal_length = 0;
-	int i;
-	const char *special = NULL;
-	struct termios tio;
 	gboolean scrolled = FALSE, steal = FALSE, modifier = FALSE, handled,
 		 suppress_meta_esc = FALSE;
 	guint keyval = 0;
-	gunichar keychar = 0;
-	char keybuf[VTE_UTF8_BPC];
 
 	terminal = VTE_TERMINAL(widget);
 
@@ -4939,57 +4930,9 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 		/* Map the key to a sequence name if we can. */
 		switch (keyval) {
 		case GDK_BackSpace:
-			switch (terminal->pvt->backspace_binding) {
-			case VTE_ERASE_ASCII_BACKSPACE:
-				normal = g_strdup("");
-				normal_length = 1;
-				suppress_meta_esc = FALSE;
-				break;
-			case VTE_ERASE_ASCII_DELETE:
-				normal = g_strdup("");
-				normal_length = 1;
-				suppress_meta_esc = FALSE;
-				break;
-			case VTE_ERASE_DELETE_SEQUENCE:
-				special = "kD";
-				suppress_meta_esc = TRUE;
-				break;
-			/* Use the tty's erase character. */
-			case VTE_ERASE_AUTO:
-			default:
-				if (terminal->pvt->pty_master != -1) {
-					if (tcgetattr(terminal->pvt->pty_master,
-						      &tio) != -1) {
-						normal = g_strdup_printf("%c",
-									 tio.c_cc[VERASE]);
-						normal_length = 1;
-					}
-				}
-				suppress_meta_esc = FALSE;
-				break;
-			}
-			handled = TRUE;
-			break;
-		case GDK_KP_Delete:
-		case GDK_Delete:
-			switch (terminal->pvt->delete_binding) {
-			case VTE_ERASE_ASCII_BACKSPACE:
-				normal = g_strdup("\010");
-				normal_length = 1;
-				break;
-			case VTE_ERASE_ASCII_DELETE:
-				normal = g_strdup("\177");
-				normal_length = 1;
-				break;
-			case VTE_ERASE_DELETE_SEQUENCE:
-			case VTE_ERASE_AUTO:
-			default:
-				special = "kD";
-				break;
-			}
-			handled = TRUE;
-			suppress_meta_esc = TRUE;
-			break;
+      vte_terminal_feed(terminal, "", 1);
+      handled = TRUE;
+      break;
 		case GDK_KP_Insert:
 		case GDK_Insert:
 			if (modifiers & GDK_SHIFT_MASK) {
@@ -5082,112 +5025,13 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				}
 			}
 			break;
+		case GDK_Return:
+		case GDK_KP_Enter:
+      handled = TRUE;
+      vte_terminal_feed(terminal, "\r\n", 2);
+      break;
 		default:
 			break;
-		}
-		/* If the above switch statement didn't do the job, try mapping
-		 * it to a literal or capability name. */
-		if (handled == FALSE && terminal->pvt->termcap != NULL) {
-			_vte_keymap_map(keyval, modifiers,
-					terminal->pvt->sun_fkey_mode,
-					terminal->pvt->hp_fkey_mode,
-					terminal->pvt->legacy_fkey_mode,
-					terminal->pvt->vt220_fkey_mode,
-					terminal->pvt->cursor_mode == VTE_KEYMODE_APPLICATION,
-					terminal->pvt->keypad_mode == VTE_KEYMODE_APPLICATION,
-					terminal->pvt->termcap,
-					terminal->pvt->emulation ?
-					terminal->pvt->emulation : vte_terminal_get_default_emulation(terminal),
-					&normal,
-					&normal_length,
-					&special);
-			/* If we found something this way, suppress
-			 * escape-on-meta. */
-			if (((normal != NULL) && (normal_length > 0)) ||
-			    (special != NULL)) {
-				suppress_meta_esc = TRUE;
-			}
-		}
-		/* If we didn't manage to do anything, try to salvage a
-		 * printable string. */
-		if (handled == FALSE && normal == NULL && special == NULL) {
-			if (event->group &&
-					(modifiers & GDK_CONTROL_MASK))
-				keyval = vte_translate_national_ctrlkeys(event);
-
-			/* Convert the keyval to a gunichar. */
-			keychar = gdk_keyval_to_unicode(keyval);
-			normal_length = 0;
-			if (keychar != 0) {
-				/* Convert the gunichar to a string. */
-				normal_length = g_unichar_to_utf8(keychar,
-								  keybuf);
-				if (normal_length != 0) {
-					normal = g_malloc(normal_length + 1);
-					memcpy(normal, keybuf, normal_length);
-					normal[normal_length] = '\0';
-				} else {
-					normal = NULL;
-				}
-			}
-			if ((normal != NULL) &&
-			    (modifiers & GDK_CONTROL_MASK)) {
-				/* Replace characters which have "control"
-				 * counterparts with those counterparts. */
-				for (i = 0; i < normal_length; i++) {
-					if ((((guint8)normal[i]) >= 0x40) &&
-					    (((guint8)normal[i]) <  0x80)) {
-						normal[i] &= (~(0x60));
-					}
-				}
-			}
-			_VTE_DEBUG_IF (VTE_DEBUG_EVENTS) {
-				if (normal) g_printerr(
-						"Keypress, modifiers=0x%x, "
-						"keyval=0x%x, cooked string=`%s'.\n",
-						modifiers,
-						keyval, normal);
-			}
-		}
-		/* If we got normal characters, send them to the child. */
-		if (normal != NULL) {
-			if (terminal->pvt->meta_sends_escape &&
-			    !suppress_meta_esc &&
-			    (normal_length > 0) &&
-			    (modifiers & VTE_META_MASK)) {
-				vte_terminal_feed_child(terminal,
-							_VTE_CAP_ESC,
-							1);
-			}
-			if (normal_length > 0) {
-				vte_terminal_feed_child_using_modes(terminal,
-								    normal,
-								    normal_length);
-			}
-			g_free(normal);
-		} else
-		/* If the key maps to characters, send them to the child. */
-		if (special != NULL && terminal->pvt->termcap != NULL) {
-			termcap = terminal->pvt->termcap;
-			tterm = terminal->pvt->emulation;
-			normal = _vte_termcap_find_string_length(termcap,
-								 tterm,
-								 special,
-								 &normal_length);
-			_vte_keymap_key_add_key_modifiers(keyval,
-							  modifiers,
-							  terminal->pvt->sun_fkey_mode,
-							  terminal->pvt->hp_fkey_mode,
-							  terminal->pvt->legacy_fkey_mode,
-							  terminal->pvt->vt220_fkey_mode,
-							  terminal->pvt->cursor_mode == VTE_KEYMODE_APPLICATION,
-							  &normal,
-							  &normal_length);
-			output = g_strdup_printf(normal, 1);
-			vte_terminal_feed_child_using_modes(terminal,
-							    output, -1);
-			g_free(output);
-			g_free(normal);
 		}
 		/* Keep the cursor on-screen. */
 		if (!scrolled && !modifier &&
