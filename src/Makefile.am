@@ -92,7 +92,7 @@ libvte_la_CFLAGS = $(VTE_CFLAGS)
 libvte_la_LIBADD = $(VTE_LIBS)
 libvte_la_LDFLAGS = \
 	-version-info $(LIBVTE_LTVERSION) \
-	-export-symbols-regex "^vte_terminal_.*|^_vte_pty_.*|^vte_reaper_.*|_vte_debug_.*" \
+	-export-symbols-regex "^vte_terminal_.*|^_vte_pty_.*|^vte_reaper_.*" \
 	@LIBTOOL_EXPORT_OPTIONS@ @LIBTOOL_FLAGS@
 
 
