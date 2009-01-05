@@ -149,7 +149,7 @@ vte_LDADD = libvte.la $(VTE_LIBS)
 
 # Misc unit tests and utilities
 
-pkglib_PROGRAMS = interpret slowcat
+pkglib_PROGRAMS = interpret
 pkglib_SCRIPTS = decset osc window
 EXTRA_DIST += $(pkglib_SCRIPTS)
 
@@ -227,9 +227,6 @@ iso2022_LDADD = $(GTK_LIBS)
 
 ring_SOURCES = ring.c ring.h debug.c debug.h
 ring_CPPFLAGS = -DRING_MAIN
-
-slowcat_SOURCES = \
-	slowcat.c
 
 table_SOURCES = \
 	buffer.c \
