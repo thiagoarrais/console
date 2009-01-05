@@ -432,7 +432,6 @@ python/Makefile
 python/pyvte.pc
 po/Makefile.in
 doc/Makefile
-doc/openi18n/Makefile
 doc/reference/Makefile
 glade/Makefile
 vte.pc
