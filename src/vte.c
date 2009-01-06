@@ -4604,7 +4604,7 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 		/* Map the key to a sequence name if we can. */
 		switch (keyval) {
 		case GDK_BackSpace:
-      vte_terminal_feed(terminal, "", 1);
+      vte_terminal_feed(terminal, "[K", 4);
       handled = TRUE;
       break;
 		case GDK_KP_Insert:
