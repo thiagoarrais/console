@@ -4632,9 +4632,11 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
                             && modifiers & GDK_SHIFT_MASK) {
 				vte_terminal_scroll_lines(terminal, -1);
 				scrolled = TRUE;
-				handled = TRUE;
 				suppress_meta_esc = TRUE;
-			}
+			} else {
+        vte_terminal_feed(terminal, "\033[A", 3);
+      }
+  		handled = TRUE;
 			break;
 		case GDK_KP_Down:
 		case GDK_Down:
@@ -4642,10 +4644,22 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
                             && modifiers & GDK_SHIFT_MASK) {
 				vte_terminal_scroll_lines(terminal, 1);
 				scrolled = TRUE;
-				handled = TRUE;
 				suppress_meta_esc = TRUE;
-			}
+			} else {
+        vte_terminal_feed(terminal, "\033[B", 3);
+      }
+			handled = TRUE;
 			break;
+		case GDK_KP_Right:
+		case GDK_Right:
+      vte_terminal_feed(terminal, "\033[C", 3);
+			handled = TRUE;
+      break;
+		case GDK_KP_Left:
+		case GDK_Left:
+      vte_terminal_feed(terminal, "\033[D", 3);
+			handled = TRUE;
+      break;
 		case GDK_KP_Page_Up:
 		case GDK_Page_Up:
 			if (modifiers & GDK_SHIFT_MASK) {
