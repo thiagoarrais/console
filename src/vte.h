@@ -80,6 +80,7 @@ struct _VteTerminalClass {
 	void (*cursor_moved)(VteTerminal* terminal);
 	void (*status_line_changed)(VteTerminal* terminal);
 	void (*commit)(VteTerminal* terminal, gchar *text, guint size);
+	void (*line_received)(VteTerminal* terminal, gchar *text, guint size);
 
 	void (*deiconify_window)(VteTerminal* terminal);
 	void (*iconify_window)(VteTerminal* terminal);
@@ -125,6 +126,7 @@ struct _VteTerminalClass {
 	guint cursor_moved_signal;
 	guint status_line_changed_signal;
 	guint commit_signal;
+	guint line_received_signal;
 
 	guint deiconify_window_signal;
 	guint iconify_window_signal;

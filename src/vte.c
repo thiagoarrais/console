@@ -10851,6 +10851,7 @@ vte_terminal_class_init(VteTerminalClass *klass)
 	klass->cursor_moved = NULL;
 	klass->status_line_changed = NULL;
 	klass->commit = NULL;
+  klass->line_received = NULL;
 
 	klass->deiconify_window = NULL;
 	klass->iconify_window = NULL;
@@ -10949,6 +10950,15 @@ vte_terminal_class_init(VteTerminalClass *klass)
 			     G_OBJECT_CLASS_TYPE(klass),
 			     G_SIGNAL_RUN_LAST,
 			     G_STRUCT_OFFSET(VteTerminalClass, commit),
+			     NULL,
+			     NULL,
+			     _vte_marshal_VOID__STRING_UINT,
+			     G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_UINT);
+	klass->line_received_signal =
+		g_signal_new("line-received",
+			     G_OBJECT_CLASS_TYPE(klass),
+			     G_SIGNAL_RUN_LAST,
+			     G_STRUCT_OFFSET(VteTerminalClass, line_received),
 			     NULL,
 			     NULL,
 			     _vte_marshal_VOID__STRING_UINT,
