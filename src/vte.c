@@ -4607,6 +4607,11 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
       vte_terminal_feed(terminal, "\010\033[P", 4);
       handled = TRUE;
       break;
+		case GDK_KP_Delete:
+		case GDK_Delete:
+      vte_terminal_feed(terminal, "\033[P", 3);
+      handled = TRUE;
+      break;
 		case GDK_KP_Insert:
 		case GDK_Insert:
 			if (modifiers & GDK_SHIFT_MASK) {
