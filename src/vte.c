@@ -7494,7 +7494,7 @@ vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
 	if (terminal->pvt->termcap != NULL) {
 		_vte_termcap_free(terminal->pvt->termcap);
 	}
-	terminal->pvt->termcap = _vte_termcap_new(terminal->pvt->termcap_path);
+	terminal->pvt->termcap = _vte_termcap_new();
 	_vte_debug_print(VTE_DEBUG_MISC, "\n");
 	if (terminal->pvt->termcap == NULL) {
 		_vte_terminal_inline_error_message(terminal,
