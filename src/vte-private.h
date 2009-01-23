@@ -424,6 +424,11 @@ struct _VteTerminalPrivate {
 	glong line_thickness;
 	glong underline_position;
 	glong strikethrough_position;
+
+  /* Pending user input */
+  gchar *pending_input;
+  glong input_length;
+  glong input_capacity;
 };
 
 

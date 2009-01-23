@@ -2069,7 +2069,7 @@ static void
 vte_sequence_handler_sf (VteTerminal *terminal, GValueArray *params)
 {
 	_vte_terminal_cursor_down (terminal);
-  vte_terminal_emit_line_received(terminal, "testline", 8);
+  vte_terminal_emit_line_received(terminal, terminal->pvt->pending_input, terminal->pvt->input_length);
 }
 
 /* Cursor down, with scrolling. */

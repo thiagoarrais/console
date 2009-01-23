@@ -4260,13 +4260,37 @@ vte_terminal_feed_child_using_modes(VteTerminal *terminal,
 	}
 }
 
-/* Send text from the input method to the child. */
+static void
+vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
+{
+  while (terminal->pvt->input_length + length > terminal->pvt->input_capacity) {
+    gchar *pending_input;
+    pending_input = (gchar *) g_slice_alloc0((1 + 2 * terminal->pvt->input_capacity) * sizeof(gchar));
+    memcpy(pending_input, terminal->pvt->pending_input, terminal->pvt->input_length * sizeof(gchar));
+    g_slice_free1((1 + terminal->pvt->input_capacity) * sizeof(gchar), terminal->pvt->pending_input);
+    terminal->pvt->pending_input = pending_input;
+    terminal->pvt->input_capacity *= 2;
+  }
+  memcpy(terminal->pvt->pending_input + terminal->pvt->input_length, text, length * sizeof(gchar));
+  terminal->pvt->input_length += length;
+}
+
+static void
+vte_terminal_user_input(VteTerminal *terminal, gchar *text)
+{
+  const int length = strlen(text);
+
+  vte_terminal_store_input(terminal, text, length);
+  vte_terminal_feed(terminal, text, length);
+}
+
+
 static void
 vte_terminal_im_commit(GtkIMContext *im_context, gchar *text, VteTerminal *terminal)
 {
 	_vte_debug_print(VTE_DEBUG_EVENTS,
 			"Input method committed `%s'.\n", text);
-  vte_terminal_feed(terminal, text, strlen(text));
+  vte_terminal_user_input(terminal, text);
 	/* Committed text was committed because the user pressed a key, so
 	 * we need to obey the scroll-on-keystroke setting. */
 	if (terminal->pvt->scroll_on_keystroke) {
@@ -7650,6 +7674,10 @@ vte_terminal_init(VteTerminal *terminal)
 	pvt->selection_block_mode = FALSE;
 	pvt->has_fonts = FALSE;
 	pvt->root_pixmap_changed_tag = 0;
+
+  pvt->input_capacity = 16;
+  pvt->pending_input = (gchar *) g_slice_alloc0(pvt->input_capacity * sizeof(gchar));
+  pvt->input_length = 0;
 
 	/* Not all backends generate GdkVisibilityNotify, so mark the
 	 * window as unobscured initially. */
