@@ -68,6 +68,8 @@ typedef gunichar wint_t;
 #endif
 
 static void vte_terminal_set_visibility (VteTerminal *terminal, GdkVisibilityState state);
+static void vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
+				     gboolean reset);
 static void vte_terminal_paste(VteTerminal *terminal, GdkAtom board);
 static void vte_terminal_real_copy_clipboard(VteTerminal *terminal);
 static void vte_terminal_real_paste_clipboard(VteTerminal *terminal);
@@ -7459,7 +7461,7 @@ _vte_terminal_inline_error_message(VteTerminal *terminal, const char *format, ..
 }
 
 /* Set the path to the termcap file we read, and read it in. */
-void
+static void
 vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
 			 gboolean reset)
 {

@@ -433,8 +433,6 @@ void vte_terminal_set_font_from_string_full(VteTerminal *terminal,
 
 #endif /* VTE_DISABLE_DEPRECATED */
 
-void vte_terminal_set_termcap(VteTerminal *terminal, const char *path, gboolean reset);
-
 G_END_DECLS
 
 #endif
