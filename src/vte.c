@@ -68,8 +68,7 @@ typedef gunichar wint_t;
 #endif
 
 static void vte_terminal_set_visibility (VteTerminal *terminal, GdkVisibilityState state);
-static void vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
-				     gboolean reset);
+static void vte_terminal_load_termcap(VteTerminal *terminal, gboolean reset);
 static void vte_terminal_paste(VteTerminal *terminal, GdkAtom board);
 static void vte_terminal_real_copy_clipboard(VteTerminal *terminal);
 static void vte_terminal_real_paste_clipboard(VteTerminal *terminal);
@@ -7360,8 +7359,8 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 	terminal->pvt->emulation = g_intern_string(emulation);
 	_vte_debug_print(VTE_DEBUG_MISC,
 			"Setting emulation to `%s'...\n", emulation);
-	/* Find and read the right termcap file. */
-	vte_terminal_set_termcap(terminal, NULL, FALSE);
+	/* Load the (static) termcap info. */
+	vte_terminal_load_termcap(terminal, FALSE);
 
 	/* Create a table to hold the control sequences. */
 	if (terminal->pvt->matcher != NULL) {
@@ -7460,10 +7459,8 @@ _vte_terminal_inline_error_message(VteTerminal *terminal, const char *format, ..
 	g_free (str);
 }
 
-/* Set the path to the termcap file we read, and read it in. */
 static void
-vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
-			 gboolean reset)
+vte_terminal_load_termcap(VteTerminal *terminal, gboolean reset)
 {
         GObject *object = G_OBJECT(terminal);
 
