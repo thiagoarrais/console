@@ -7464,33 +7464,9 @@ vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
 			 gboolean reset)
 {
         GObject *object = G_OBJECT(terminal);
-	struct stat st;
-	char *wpath;
-
-	if (path == NULL) {
-		wpath = g_strdup_printf(DATADIR "/" PACKAGE "/termcap/%s",
-					terminal->pvt->emulation ?
-					terminal->pvt->emulation :
-					vte_terminal_get_default_emulation(terminal));
-		if (g_stat(wpath, &st) != 0) {
-			g_free(wpath);
-			wpath = g_strdup("/etc/termcap");
-		}
-		path = g_intern_string (wpath);
-		g_free(wpath);
-	} else {
-		path = g_intern_string (path);
-	}
-	if (path == terminal->pvt->termcap_path) {
-		return;
-	}
 
         g_object_freeze_notify(object);
 
-	terminal->pvt->termcap_path = path;
-
-	_vte_debug_print(VTE_DEBUG_MISC, "Loading termcap `%s'...",
-			terminal->pvt->termcap_path);
 	if (terminal->pvt->termcap != NULL) {
 		_vte_termcap_free(terminal->pvt->termcap);
 	}
@@ -7498,8 +7474,7 @@ vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
 	_vte_debug_print(VTE_DEBUG_MISC, "\n");
 	if (terminal->pvt->termcap == NULL) {
 		_vte_terminal_inline_error_message(terminal,
-				"Failed to load terminal capabilities from '%s'",
-				terminal->pvt->termcap_path);
+				"Failed to load terminal capabilities");
 	}
 	if (reset) {
 		vte_terminal_set_emulation(terminal, terminal->pvt->emulation);
