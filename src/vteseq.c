@@ -233,36 +233,6 @@ vte_parse_color (const char *spec, GdkColor *color)
 	return retval;
 }
 
-/* Emit a "line-received" signal. */
-static void
-vte_terminal_emit_line_received(VteTerminal *terminal, const gchar *text, guint length)
-{
-	const char *result = NULL;
-	char *wrapped = NULL;
-
-	_vte_debug_print(VTE_DEBUG_SIGNALS,
-			"Emitting `line-received' of %d bytes.\n", length);
-
-	if (length == (guint)-1) {
-		length = strlen(text);
-		result = text;
-	} else {
-		result = wrapped = g_slice_alloc(length + 1);
-		memcpy(wrapped, text, length);
-		wrapped[length] = '\0';
-	}
-
-	g_signal_emit_by_name(terminal, "line-received", result, length);
-
-	if(wrapped)
-		g_slice_free1(length+1, wrapped);
-}
-
-
-
-
-
-
 /* Emit a "deiconify-window" signal. */
 static void
 vte_terminal_emit_deiconify_window(VteTerminal *terminal)
@@ -2069,7 +2039,7 @@ static void
 vte_sequence_handler_sf (VteTerminal *terminal, GValueArray *params)
 {
 	_vte_terminal_cursor_down (terminal);
-  vte_terminal_emit_line_received(terminal, terminal->pvt->pending_input, terminal->pvt->input_length);
+  vte_terminal_flush_pending_input(terminal);
 }
 
 /* Cursor down, with scrolling. */

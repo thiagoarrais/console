@@ -390,6 +390,9 @@ const char *vte_terminal_get_status_line(VteTerminal *terminal);
 /* Get the padding the widget is using. */
 void vte_terminal_get_padding(VteTerminal *terminal, int *xpad, int *ypad);
 
+/* Flush any pending user input to listeners and reset */
+void vte_terminal_flush_pending_input(VteTerminal *terminal);
+
 /* Attach an existing PTY master side to the terminal widget.  Use
  * instead of vte_terminal_fork_command(). */
 void vte_terminal_set_pty(VteTerminal *terminal, int pty_master);

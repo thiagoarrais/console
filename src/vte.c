@@ -938,6 +938,31 @@ vte_terminal_queue_cursor_moved(VteTerminal *terminal)
 	terminal->pvt->cursor_moved_pending = TRUE;
 }
 
+/* Emit a "line-received" signal. */
+static void
+vte_terminal_emit_line_received(VteTerminal *terminal, const gchar *text, guint length)
+{
+	const char *result = NULL;
+	char *wrapped = NULL;
+
+	_vte_debug_print(VTE_DEBUG_SIGNALS,
+			"Emitting `line-received' of %d bytes.\n", length);
+
+	if (length == (guint)-1) {
+		length = strlen(text);
+		result = text;
+	} else {
+		result = wrapped = g_slice_alloc(length + 1);
+		memcpy(wrapped, text, length);
+		wrapped[length] = '\0';
+	}
+
+	g_signal_emit_by_name(terminal, "line-received", result, length);
+
+	if(wrapped)
+		g_slice_free1(length+1, wrapped);
+}
+
 static gboolean
 vte_terminal_emit_eof(VteTerminal *terminal)
 {
@@ -4273,6 +4298,25 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
   }
   memcpy(terminal->pvt->pending_input + terminal->pvt->input_length, text, length * sizeof(gchar));
   terminal->pvt->input_length += length;
+}
+
+static void vte_terminal_reset_pending_input(VteTerminal *terminal)
+{
+  VteTerminalPrivate *pvt = terminal->pvt;
+
+  pvt->input_capacity = 16;
+  pvt->pending_input = (gchar *) g_slice_alloc0((1 + pvt->input_capacity) * sizeof(gchar));
+  pvt->input_length = 0;
+}
+
+void
+vte_terminal_flush_pending_input(VteTerminal *terminal)
+{
+  VteTerminalPrivate *pvt = terminal->pvt;
+
+  vte_terminal_emit_line_received(terminal, pvt->pending_input, pvt->input_length);
+  g_slice_free1((1 + pvt->input_capacity) * sizeof(gchar), pvt->pending_input);
+  vte_terminal_reset_pending_input(terminal);
 }
 
 static void
@@ -7675,9 +7719,7 @@ vte_terminal_init(VteTerminal *terminal)
 	pvt->has_fonts = FALSE;
 	pvt->root_pixmap_changed_tag = 0;
 
-  pvt->input_capacity = 16;
-  pvt->pending_input = (gchar *) g_slice_alloc0(pvt->input_capacity * sizeof(gchar));
-  pvt->input_length = 0;
+  vte_terminal_reset_pending_input(terminal);
 
 	/* Not all backends generate GdkVisibilityNotify, so mark the
 	 * window as unobscured initially. */
