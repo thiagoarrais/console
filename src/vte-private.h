@@ -185,6 +185,12 @@ typedef struct _VteRowData {
 	guchar soft_wrapped: 1;
 } VteRowData;
 
+typedef struct _InputNode {
+  gchar charData;
+  struct InputNode *previous;
+  struct InputNode *next;
+} InputNode;
+
 /* Terminal private data. */
 struct _VteTerminalPrivate {
 	/* Emulation setup data. */
@@ -426,9 +432,9 @@ struct _VteTerminalPrivate {
 	glong strikethrough_position;
 
   /* Pending user input */
-  gchar *pending_input;
+  InputNode *pending_input;
+  InputNode *input_head;
   glong input_length;
-  glong input_capacity;
 };
 
 

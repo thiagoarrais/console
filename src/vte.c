@@ -4288,34 +4288,52 @@ vte_terminal_feed_child_using_modes(VteTerminal *terminal,
 static void
 vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
 {
-  while (terminal->pvt->input_length + length > terminal->pvt->input_capacity) {
-    gchar *pending_input;
-    pending_input = (gchar *) g_slice_alloc0((1 + 2 * terminal->pvt->input_capacity) * sizeof(gchar));
-    memcpy(pending_input, terminal->pvt->pending_input, terminal->pvt->input_length * sizeof(gchar));
-    g_slice_free1((1 + terminal->pvt->input_capacity) * sizeof(gchar), terminal->pvt->pending_input);
-    terminal->pvt->pending_input = pending_input;
-    terminal->pvt->input_capacity *= 2;
+  glong i;
+  InputNode *current_node, *last_node;
+
+  current_node = (InputNode*) g_slice_alloc0(length * sizeof(InputNode));
+  last_node = terminal->pvt->pending_input;
+  if (!last_node) terminal->pvt->input_head = terminal->pvt->pending_input = current_node;
+  for(i = 0; i < length; ++i) {
+    current_node->charData = text[i];
+    current_node->previous = last_node;
+    if (last_node) last_node->next = current_node;
+    last_node = current_node;
+    current_node++;
   }
-  memcpy(terminal->pvt->pending_input + terminal->pvt->input_length, text, length * sizeof(gchar));
+
+  terminal->pvt->pending_input = last_node;
   terminal->pvt->input_length += length;
 }
 
 static void vte_terminal_reset_pending_input(VteTerminal *terminal)
 {
-  VteTerminalPrivate *pvt = terminal->pvt;
-
-  pvt->input_capacity = 16;
-  pvt->pending_input = (gchar *) g_slice_alloc0((1 + pvt->input_capacity) * sizeof(gchar));
-  pvt->input_length = 0;
+  terminal->pvt->input_head = terminal->pvt->pending_input = NULL;
+  terminal->pvt->input_length = 0;
 }
 
 void
 vte_terminal_flush_pending_input(VteTerminal *terminal)
 {
+  glong i;
+  gchar *input_line;
+  InputNode *current_node, *next_node;
   VteTerminalPrivate *pvt = terminal->pvt;
 
-  vte_terminal_emit_line_received(terminal, pvt->pending_input, pvt->input_length);
-  g_slice_free1((1 + pvt->input_capacity) * sizeof(gchar), pvt->pending_input);
+  input_line = (gchar*) g_slice_alloc((pvt->input_length + 1) * sizeof(gchar));
+
+  current_node = pvt->input_head;
+  i = 0;
+  while(current_node) {
+    input_line[i++] = current_node->charData;
+    next_node = current_node->next;
+    g_slice_free(InputNode, current_node);
+    current_node = next_node;
+  }
+  input_line[i] = '\0';
+
+  vte_terminal_emit_line_received(terminal, input_line, pvt->input_length);
+
   vte_terminal_reset_pending_input(terminal);
 }
 
