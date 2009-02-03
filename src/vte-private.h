@@ -432,7 +432,7 @@ struct _VteTerminalPrivate {
 	glong strikethrough_position;
 
   /* Pending user input */
-  InputNode *pending_input;
+  InputNode *input_cursor;
   InputNode *input_head;
   glong input_length;
 };
