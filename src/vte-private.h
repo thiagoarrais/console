@@ -185,7 +185,7 @@ typedef struct _VteRowData {
 	guchar soft_wrapped: 1;
 } VteRowData;
 
-typedef struct _InputNode {
+typedef struct InputNode {
   gchar charData;
   struct InputNode *previous;
   struct InputNode *next;

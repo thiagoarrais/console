@@ -4355,6 +4355,20 @@ void vte_terminal_cursor_right(VteTerminal *terminal) {
   terminal->pvt->input_cursor = terminal->pvt->input_cursor->next;
 }
 
+void vte_terminal_delete_current_char(VteTerminal *terminal)
+{
+  InputNode *deleted_node = terminal->pvt->input_cursor->next;
+
+  if (deleted_node) {
+    if (deleted_node->previous)
+      deleted_node->previous->next = deleted_node->next;
+    if (deleted_node->next)
+      deleted_node->next->previous = deleted_node->previous;
+  }
+
+  g_slice_free(InputNode, deleted_node);
+}
+
 static void
 vte_terminal_user_input(VteTerminal *terminal, gchar *text)
 {

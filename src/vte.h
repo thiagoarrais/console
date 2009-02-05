@@ -397,6 +397,8 @@ void vte_terminal_flush_pending_input(VteTerminal *terminal);
 void vte_terminal_cursor_left(VteTerminal *terminal);
 void vte_terminal_cursor_right(VteTerminal *terminal);
 
+/* Removes a single character from pending input */
+void vte_terminal_delete_current_char(VteTerminal *terminal);
 
 /* Attach an existing PTY master side to the terminal widget.  Use
  * instead of vte_terminal_fork_command(). */
