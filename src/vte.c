@@ -4364,6 +4364,7 @@ void vte_terminal_delete_current_char(VteTerminal *terminal)
       deleted_node->previous->next = deleted_node->next;
     if (deleted_node->next)
       deleted_node->next->previous = deleted_node->previous;
+    --terminal->pvt->input_length;
   }
 
   g_slice_free(InputNode, deleted_node);
