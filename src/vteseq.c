@@ -2046,6 +2046,20 @@ vte_sequence_handler_sf (VteTerminal *terminal, GValueArray *params)
   vte_terminal_flush_pending_input(terminal);
 }
 
+static void
+vte_sequence_handler_ai (VteTerminal *terminal, GValueArray *params)
+{
+  vte_terminal_stop_user_input(terminal);
+  return FALSE;
+}
+
+static void
+vte_sequence_handler_ui (VteTerminal *terminal, GValueArray *params)
+{
+  vte_terminal_start_user_input(terminal);
+  return FALSE;
+}
+
 /* Cursor down, with scrolling. */
 static void
 vte_sequence_handler_SF (VteTerminal *terminal, GValueArray *params)

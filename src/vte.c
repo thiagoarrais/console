@@ -4013,6 +4013,30 @@ out:
 	return again;
 }
 
+void
+vte_terminal_begin_app_output(VteTerminal *terminal)
+{
+  vte_terminal_feed(terminal, "\033[O", 3);
+}
+
+void
+vte_terminal_finish_app_output(VteTerminal *terminal)
+{
+  vte_terminal_feed(terminal, "\033[N", 3);
+}
+
+void
+vte_terminal_stop_user_input(VteTerminal *terminal)
+{
+  terminal->pvt->user_input_mode = FALSE;
+}
+
+void
+vte_terminal_start_user_input(VteTerminal *terminal)
+{
+  terminal->pvt->user_input_mode = TRUE;
+}
+
 /**
  * vte_terminal_feed:
  * @terminal: a #VteTerminal
@@ -4292,6 +4316,8 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
   InputNode *current_node, *last_node;
   VteTerminalPrivate *pvt = terminal->pvt;
 
+  if (!pvt->user_input_mode) return;
+
   current_node = (InputNode*) g_slice_alloc0(length * sizeof(InputNode));
   last_node = pvt->input_cursor;
   for(i = 0; i < length; ++i) {
@@ -4331,6 +4357,8 @@ vte_terminal_flush_pending_input(VteTerminal *terminal)
   InputNode *current_node, *next_node;
   VteTerminalPrivate *pvt = terminal->pvt;
 
+  if (!pvt->user_input_mode) return;
+
   input_line = (gchar*) g_slice_alloc((pvt->input_length + 1) * sizeof(gchar));
 
   current_node = pvt->input_head->next;
@@ -4349,11 +4377,15 @@ vte_terminal_flush_pending_input(VteTerminal *terminal)
 }
 
 void vte_terminal_cursor_left(VteTerminal *terminal) {
-  terminal->pvt->input_cursor = terminal->pvt->input_cursor->previous;
+  if (terminal->pvt->user_input_mode)
+    terminal->pvt->input_cursor = terminal->pvt->input_cursor->previous;
 }
 
 void vte_terminal_cursor_right(VteTerminal *terminal) {
   InputNode *cursor = terminal->pvt->input_cursor;
+
+  if (!terminal->pvt->user_input_mode) return;
+
   if (cursor->next) terminal->pvt->input_cursor = cursor->next;
   else vte_terminal_store_input(terminal, " ", 1);
 }
@@ -4361,6 +4393,8 @@ void vte_terminal_cursor_right(VteTerminal *terminal) {
 void vte_terminal_delete_current_char(VteTerminal *terminal)
 {
   InputNode *deleted_node = terminal->pvt->input_cursor->next;
+
+  if (!terminal->pvt->user_input_mode) return;
 
   if (deleted_node) {
     if (deleted_node->previous)
@@ -7773,6 +7807,7 @@ vte_terminal_init(VteTerminal *terminal)
 	pvt->has_fonts = FALSE;
 	pvt->root_pixmap_changed_tag = 0;
 
+  pvt->user_input_mode = TRUE;
   vte_terminal_reset_pending_input(terminal);
 
 	/* Not all backends generate GdkVisibilityNotify, so mark the

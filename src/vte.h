@@ -210,6 +210,13 @@ GType vte_terminal_get_type(void);
 
 GtkWidget *vte_terminal_new(void);
 
+/* Mark a block of data (sent through vte_terminal_feed) as app data that should
+ * not be interpreted as user input */
+void vte_terminal_begin_app_output(VteTerminal *terminal);
+void vte_terminal_finish_app_output(VteTerminal *terminal);
+void vte_terminal_start_user_input(VteTerminal *terminal);
+void vte_terminal_stop_user_input(VteTerminal *terminal);
+
 /* Send data to the terminal to display, or to the terminal's forked command
  * to handle in some way.  If it's 'cat', they should be the same. */
 void vte_terminal_feed(VteTerminal *terminal, const char *data, glong length);

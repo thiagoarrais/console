@@ -435,6 +435,9 @@ struct _VteTerminalPrivate {
   InputNode *input_cursor;
   InputNode *input_head;
   glong input_length;
+
+  /* Is the data being fed by the user or by the app? */
+  gboolean user_input_mode;
 };
 
 
