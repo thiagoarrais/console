@@ -4315,7 +4315,8 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
 static void vte_terminal_reset_pending_input(VteTerminal *terminal)
 {
   InputNode *head_node = g_slice_new(InputNode);
-  head_node->previous = head_node->next = NULL;
+  head_node->previous = head_node;
+  head_node->next = NULL;
   head_node->charData = '\0';
 
   terminal->pvt->input_head = terminal->pvt->input_cursor = head_node;
@@ -4352,7 +4353,9 @@ void vte_terminal_cursor_left(VteTerminal *terminal) {
 }
 
 void vte_terminal_cursor_right(VteTerminal *terminal) {
-  terminal->pvt->input_cursor = terminal->pvt->input_cursor->next;
+  InputNode *cursor = terminal->pvt->input_cursor;
+  if (cursor->next) terminal->pvt->input_cursor = cursor->next;
+  else vte_terminal_store_input(terminal, " ", 1);
 }
 
 void vte_terminal_delete_current_char(VteTerminal *terminal)
