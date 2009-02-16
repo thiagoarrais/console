@@ -11094,8 +11094,8 @@ vte_terminal_class_init(VteTerminalClass *klass)
 			     G_STRUCT_OFFSET(VteTerminalClass, line_received),
 			     NULL,
 			     NULL,
-			     _vte_marshal_VOID__STRING_UINT,
-			     G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_UINT);
+			     _vte_marshal_VOID__STRING,
+			     G_TYPE_NONE, 1, G_TYPE_STRING);
 	klass->emulation_changed_signal =
                 g_signal_new(I_("emulation-changed"),
 			     G_OBJECT_CLASS_TYPE(klass),
