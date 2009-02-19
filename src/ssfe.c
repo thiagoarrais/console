@@ -22,25 +22,6 @@
 
 #include <stdarg.h>
 
-#if defined(HAVE_NCURSES_H) && defined(HAVE_TERM_H)
-#include <ncurses.h>
-#include <term.h>
-#define VTE_TERMCAP_NAME "ncurses"
-#elif defined(HAVE_NCURSES_CURSES_H) && defined(HAVE_NCURSES_TERM_H)
-#include <ncurses/curses.h>
-#include <ncurses/term.h>
-#define VTE_TERMCAP_NAME "ncurses"
-#elif defined(HAVE_CURSES_H) && defined(HAVE_TERM_H)
-#include <curses.h>
-#include <term.h>
-#define VTE_TERMCAP_NAME "curses"
-#elif defined(HAVE_TERMCAP_H)
-#include <termcap.h>
-#define VTE_TERMCAP_NAME "termcap"
-#else
-#error No termcap??
-#endif
-
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #ifdef HAVE_SYS_TERMIOS_H

@@ -106,6 +106,7 @@ struct _vte_capability_quark _vte_terminal_capability_strings[] = {
 	{"@9", TRUE, 0},
 
 	{"ae", FALSE, 0},
+	{"ai", FALSE, 0},
 	{"al", FALSE, 0},
 	{"AL", FALSE, 0},
 	{"as", FALSE, 0},
@@ -342,6 +343,7 @@ struct _vte_capability_quark _vte_terminal_capability_strings[] = {
 
 	{"uc", FALSE, 0},
 	{"ue", FALSE, 0},
+	{"ui", FALSE, 0},
 	{"up", FALSE, 0},
 	{"UP", FALSE, 0},
 	{"us", FALSE, 0},
@@ -448,6 +450,8 @@ struct _vte_capability_string _vte_xterm_capability_strings[] = {
 	{CSI "%dL", "insert-lines", 0},
 	{CSI "M", "delete-lines", 0},
 	{CSI "%dM", "delete-lines", 0},
+	{CSI "N", "start-user-input", 0},
+	{CSI "O", "finish-user-input", 0},
 	{CSI "P", "delete-characters", 0},
 	{CSI "%dP", "delete-characters", 0},
 	{CSI "S", "scroll-up", 0},

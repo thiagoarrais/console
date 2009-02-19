@@ -233,11 +233,6 @@ vte_parse_color (const char *spec, GdkColor *color)
 	return retval;
 }
 
-
-
-
-
-
 /* Emit a "deiconify-window" signal. */
 static void
 vte_terminal_emit_deiconify_window(VteTerminal *terminal)
@@ -1495,6 +1490,8 @@ vte_sequence_handler_dc (VteTerminal *terminal, GValueArray *params)
 		}
 	}
 
+  vte_terminal_delete_current_char(terminal);
+
 	/* We've modified the display.  Make a note of it. */
 	terminal->pvt->text_deleted_flag = TRUE;
 }
@@ -1753,6 +1750,7 @@ vte_sequence_handler_le (VteTerminal *terminal, GValueArray *params)
 		/* There's room to move left, so do so. */
 		screen->cursor_current.col--;
 		_vte_terminal_cleanup_tab_fragments_at_cursor (terminal);
+    vte_terminal_cursor_left(terminal);
 	} else {
 		if (terminal->pvt->flags.bw) {
 			/* Wrap to the previous line. */
@@ -1851,6 +1849,7 @@ vte_sequence_handler_nd (VteTerminal *terminal, GValueArray *params)
 	if ((screen->cursor_current.col + 1) < terminal->column_count) {
 		/* There's room to move right. */
 		screen->cursor_current.col++;
+    vte_terminal_cursor_right(terminal);
 	}
 }
 
@@ -2044,6 +2043,21 @@ static void
 vte_sequence_handler_sf (VteTerminal *terminal, GValueArray *params)
 {
 	_vte_terminal_cursor_down (terminal);
+  vte_terminal_flush_pending_input(terminal);
+}
+
+static void
+vte_sequence_handler_ai (VteTerminal *terminal, GValueArray *params)
+{
+  vte_terminal_stop_user_input(terminal);
+  return FALSE;
+}
+
+static void
+vte_sequence_handler_ui (VteTerminal *terminal, GValueArray *params)
+{
+  vte_terminal_start_user_input(terminal);
+  return FALSE;
 }
 
 /* Cursor down, with scrolling. */

@@ -19,7 +19,6 @@
 #ifndef vte_vte_private_h_included
 #define vte_vte_private_h_included
 
-#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -30,7 +29,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <math.h>
-#include <pwd.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,7 +45,6 @@
 #include "debug.h"
 #include "vteconv.h"
 #include "vtedraw.h"
-#include "reaper.h"
 #include "ring.h"
 #include "caps.h"
 
@@ -188,12 +185,17 @@ typedef struct _VteRowData {
 	guchar soft_wrapped: 1;
 } VteRowData;
 
+typedef struct InputNode {
+  gchar charData;
+  struct InputNode *previous;
+  struct InputNode *next;
+} InputNode;
+
 /* Terminal private data. */
 struct _VteTerminalPrivate {
 	/* Emulation setup data. */
 	struct _vte_termcap *termcap;	/* termcap storage */
 	struct _vte_matcher *matcher;	/* control sequence matcher */
-	const char *termcap_path;	/* path to termcap file */
 	const char *emulation;		/* terminal type to emulate */
 	struct vte_terminal_flags {	/* boolean termcap flags */
 		gboolean am;
@@ -221,7 +223,6 @@ struct _VteTerminalPrivate {
 	guint pty_output_source;
 	gboolean pty_input_active;
 	GPid pty_pid;			/* pid of child using pty slave */
-	VteReaper *pty_reaper;
         int child_exit_status;
 
 	/* Input data queues. */
@@ -429,6 +430,14 @@ struct _VteTerminalPrivate {
 	glong line_thickness;
 	glong underline_position;
 	glong strikethrough_position;
+
+  /* Pending user input */
+  InputNode *input_cursor;
+  InputNode *input_head;
+  glong input_length;
+
+  /* Is the data being fed by the user or by the app? */
+  gboolean user_input_mode;
 };
 
 

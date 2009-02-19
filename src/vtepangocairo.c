@@ -31,6 +31,9 @@
 
 #include <pango/pangocairo.h>
 
+#ifndef howmany
+#define howmany(x, y) (((x) + ((y) - 1)) / (y))
+#endif
 
 /* Overview:
  *

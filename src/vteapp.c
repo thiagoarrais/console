@@ -20,7 +20,6 @@
 #include <config.h>
 
 #include <stdlib.h>
-#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -390,8 +389,14 @@ take_xconsole_ownership(GtkWidget *widget, gpointer data)
 		{"STRING", 0, 0},
 	};
 
-	memset(hostname, '\0', sizeof(hostname));
-	gethostname(hostname, sizeof(hostname) - 1);
+  hostname[0] = 'h';
+  hostname[1] = 'o';
+  hostname[2] = 's';
+  hostname[3] = 't';
+  hostname[4] = 'n';
+  hostname[5] = 'a';
+  hostname[6] = 'm';
+  hostname[7] = 'e';
 
 	name = g_strdup_printf("MIT_CONSOLE_%s", hostname);
 	atom = gdk_atom_intern(name, FALSE);
@@ -448,11 +453,6 @@ main(int argc, char **argv)
 	GdkColormap *colormap;
 	GtkWidget *window, *widget,*hbox = NULL, *scrollbar, *scrolled_window = NULL;
 	VteTerminal *terminal;
-	char *env_add[] = {
-#ifdef VTE_DEBUG
-		"FOO=BAR", "BOO=BIZ",
-#endif
-		NULL};
 	const char *background = NULL;
 	gboolean transparent = FALSE, audible = TRUE, blink = TRUE,
 		 debug = FALSE, dingus = FALSE, dbuffer = TRUE,
@@ -464,7 +464,6 @@ main(int argc, char **argv)
         int scrollbar_policy = 0;
         char *geometry = NULL;
 	gint lines = 100;
-	const char *message = "Launching interactive shell...\r\n";
 	const char *font = NULL;
 	const char *termcap = NULL;
 	const char *command = NULL;
@@ -606,8 +605,7 @@ main(int argc, char **argv)
 			G_OPTION_ARG_NONE, &show_object_notifications,
 			"Print VteTerminal object notifications",
 			NULL
-		},
-		{ NULL }
+		}
 	};
 	GOptionContext *context;
 	GError *error = NULL;
@@ -808,7 +806,7 @@ main(int argc, char **argv)
 		/* Open a "console" connection. */
 		int consolefd = -1, yes = 1, watch;
 		GIOChannel *channel;
-		consolefd = open("/dev/console", O_RDONLY | O_NOCTTY);
+		consolefd = open("/dev/console", O_RDONLY);
 		if (consolefd != -1) {
 			/* Assume failure. */
 			console = FALSE;
@@ -849,57 +847,6 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (!console) {
-		if (shell) {
-			/* Launch a shell. */
-			_VTE_DEBUG_IF(VTE_DEBUG_MISC)
-				vte_terminal_feed(terminal, message, -1);
-			vte_terminal_fork_command(terminal,
-						  command, NULL, env_add,
-						  working_directory,
-						  TRUE, TRUE, TRUE);
-	#ifdef VTE_DEBUG
-			if (command == NULL) {
-				vte_terminal_feed_child(terminal,
-							"pwd\n", -1);
-			}
-	#endif
-		} else {
-			long i;
-			i = vte_terminal_forkpty(terminal,
-						 env_add, working_directory,
-						 TRUE, TRUE, TRUE);
-			switch (i) {
-			case -1:
-				/* abnormal */
-				g_warning("Error in vte_terminal_forkpty(): %s",
-					  strerror(errno));
-				break;
-			case 0:
-				/* child */
-				for (i = 0; ; i++) {
-					switch (i % 3) {
-					case 0:
-					case 1:
-						g_print("%ld\n", i);
-						break;
-					case 2:
-						g_printerr("%ld\n", i);
-						break;
-					}
-					sleep(1);
-				}
-				_exit(0);
-				break;
-			default:
-				g_print("Child PID is %ld (mine is %ld).\n",
-					(long) i, (long) getpid());
-				/* normal */
-				break;
-			}
-		}
-	}
-
 	/* Go for it! */
 	add_weak_pointer(G_OBJECT(widget), &widget);
 	add_weak_pointer(G_OBJECT(window), &window);
@@ -918,12 +865,6 @@ main(int argc, char **argv)
 
 	g_assert(widget == NULL);
 	g_assert(window == NULL);
-
-	if (keep) {
-		while (TRUE) {
-			sleep(60);
-		}
-	}
 
 	return 0;
 }

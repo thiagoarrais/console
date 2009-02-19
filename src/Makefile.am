@@ -4,7 +4,7 @@ EXTRA_DIST = iso2022.txt
 
 # The library
 
-pkginclude_HEADERS = pty.h reaper.h vte.h vteaccess.h vtetypebuiltins.h vteversion.h
+pkginclude_HEADERS = vte.h vteaccess.h vtetypebuiltins.h vteversion.h
 
 lib_LTLIBRARIES = libvte.la
 
@@ -44,10 +44,6 @@ libvte_la_SOURCES = \
 	marshal.h \
 	matcher.c \
 	matcher.h \
-	pty.c \
-	pty.h \
-	reaper.c \
-	reaper.h \
 	ring.c \
 	ring.h \
 	table.c \
@@ -96,7 +92,7 @@ libvte_la_CFLAGS = $(VTE_CFLAGS)
 libvte_la_LIBADD = $(VTE_LIBS)
 libvte_la_LDFLAGS = \
 	-version-info $(LIBVTE_LTVERSION) \
-	-export-symbols-regex "^vte_terminal_.*|^_vte_pty_.*|^vte_reaper_.*|_vte_debug_.*" \
+	-export-symbols-regex "^vte_terminal_.*|^_vte_pty_.*|^vte_reaper_.*" \
 	@LIBTOOL_EXPORT_OPTIONS@ @LIBTOOL_FLAGS@
 
 
@@ -153,14 +149,14 @@ vte_LDADD = libvte.la $(VTE_LIBS)
 
 # Misc unit tests and utilities
 
-pkglib_PROGRAMS = interpret slowcat
+pkglib_PROGRAMS = interpret
 pkglib_SCRIPTS = decset osc window
 EXTRA_DIST += $(pkglib_SCRIPTS)
 
 TEST_SH = check-doc-syntax.sh
 EXTRA_DIST += $(TEST_SH)
 
-check_PROGRAMS = buffer dumpkeys iso2022 pty reaper reflect-text-view reflect-vte ring mev ssfe table trie xticker vteconv vtetc
+check_PROGRAMS = buffer dumpkeys iso2022 reflect-text-view reflect-vte ring mev ssfe table trie xticker vteconv vtetc
 TESTS = buffer ring table trie $(TEST_SH)
 
 AM_CFLAGS = $(GLIB_CFLAGS) $(GOBJECT_CFLAGS)
@@ -232,9 +228,6 @@ iso2022_LDADD = $(GTK_LIBS)
 ring_SOURCES = ring.c ring.h debug.c debug.h
 ring_CPPFLAGS = -DRING_MAIN
 
-slowcat_SOURCES = \
-	slowcat.c
-
 table_SOURCES = \
 	buffer.c \
 	buffer.h \
@@ -279,12 +272,6 @@ trie_LDADD = $(VTE_LIBS)
 
 vtetc_SOURCES = vtetc.c vtetc.h debug.c debug.h
 vtetc_CPPFLAGS = -DTERMCAP_MAIN
-
-pty_SOURCES = pty.c pty.h debug.c debug.h
-pty_CPPFLAGS = -DPTY_MAIN -DLIBEXECDIR='"$(libexecdir)"'
-
-reaper_SOURCES = reaper.c reaper.h debug.c debug.h marshal.c marshal.h
-reaper_CPPFLAGS =  -DREAPER_MAIN -DLOCALEDIR='"$(localedir)"'
 
 vteconv_SOURCES = buffer.c buffer.h debug.c debug.h vteconv.c vteconv.h
 vteconv_CPPFLAGS = -DVTECONV_MAIN

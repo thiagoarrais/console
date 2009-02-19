@@ -2,10 +2,6 @@ SUBDIRS = src python termcaps po doc perf
 EXTRA_DIST = MAINTAINERS HACKING vte.pc.in vte-uninstalled.pc.in
 DISTCLEANFILES =
 
-if BUILD_GNOME_PTY_HELPER
-SUBDIRS += gnome-pty-helper
-endif
-
 if ENABLE_GLADE_CATALOGUE
 SUBDIRS += glade
 endif

@@ -269,9 +269,6 @@ AC_SUBST(VTE_DEFAULT_EMULATION)
 AC_CHECK_HEADERS(sys/select.h sys/syslimits.h sys/termios.h sys/un.h sys/wait.h stropts.h termios.h wchar.h)
 AC_HEADER_TIOCGWINSZ
 
-# Check for PTY handling functions.
-AC_CHECK_FUNCS([cfmakeraw fork setsid setpgid getpgid getpt grantpt unlockpt ptsname ptsname_r tcgetattr tcsetattr])
-
 # Pull in the right libraries for various functions which might not be
 # bundled into an exploded libc.
 AC_CHECK_FUNC(socket,[have_socket=1],AC_CHECK_LIB(socket,socket,[have_socket=1; LIBS="$LIBS -lsocket"]))
@@ -288,43 +285,6 @@ if test x$have_recvmsg = x1 ; then
 fi
 AC_CHECK_FUNC(floor,,AC_CHECK_LIB(m,floor,LIBS=["$LIBS -lm"]))
 AC_CHECK_FUNCS([ceil floor])
-
-# Look for tgetent
-
-AC_CHECK_FUNC([tgetent],[vte_cv_termcap_lib=libc],
-  [AC_CHECK_LIB([ncurses],[tgetent],[vte_cv_termcap_lib=libncurses],
-    [AC_CHECK_LIB([tinfo],[tgetent],[vte_cv_termcap_lib=libtinfo],
-      [AC_CHECK_LIB([curses],[tgetent],[vte_cv_termcap_lib=libcurses],
-        [AC_CHECK_LIB([termcap],[tgetent],[vte_cv_termcap_lib=libtermcap],
-          [vte_cv_termcap_lib=])])])])])
-
-case "$vte_cv_termcap_lib" in
-  libc)       # FIXME: which headers to include here?
-              ;;
-  libncurses) # We need ncurses.h and term.h, or ncurses/curses.h and ncurses/term.h
-              AC_CHECK_HEADERS([ncurses.h term.h],[],
-                [AC_CHECK_HEADERS([ncurses/curses.h ncurses/term.h],[],
-                  [AC_MSG_ERROR([ncurses headers not found])])])
-              LIBS="-lncurses $LIBS"
-              ;;
-  libtinfo)   # Need ncurses/curses.h and ncurses/term.h
-              AC_CHECK_HEADERS([ncurses.h term.h],[],
-                [AC_CHECK_HEADERS([ncurses/curses.h ncurses/term.h],[],
-                  [AC_MSG_ERROR([ncurses headers not found])])])
-              LIBS="-ltinfo $LIBS"
-              ;;
-  libcurses)  # Need curses.h and term.h
-              AC_CHECK_HEADERS([curses.h term.h],[],
-                [AC_MSG_ERROR([curses headers not found])])
-              LIBS="-lncurses $LIBS"
-              ;;
-  libtermcap) # Need termcap.h
-              AC_CHECK_HEADERS([termcap.h],[],
-                [AC_MSG_ERROR([termcap headers not found])])
-              LIBS="-ltermcap $LIBS"
-              ;;
-  *)          AC_MSG_ERROR([tgetent not found in any library]) ;;
-esac
 
 # Search for the required modules.
 VTE_PKGS="glib-2.0 >= $GLIB_REQUIRED gobject-2.0 pango >= $PANGO_REQUIRED gtk+-2.0 >= $GTK_REQUIRED"
@@ -421,13 +381,6 @@ AC_SUBST(PYTHONREV)
 AC_SUBST(PYTHONMODULES)
 AM_CONDITIONAL(BUILD_PYTHON_MODULES, $BUILD_PYTHON)
 
-AC_ARG_ENABLE(gnome-pty-helper, [AS_HELP_STRING(--enable-gnome-pty-helper,Build a setuid helper for opening ptys [default=yes])], enable_gnome_pty_helper="$enableval", enable_gnome_pty_helper=yes)
-if test "$enable_gnome_pty_helper" != no; then
-	AC_DEFINE(VTE_USE_GNOME_PTY_HELPER,1,[Define if you intend to use gnome-pty-helper.])
-	AC_CONFIG_SUBDIRS(gnome-pty-helper)
-fi
-AM_CONDITIONAL(BUILD_GNOME_PTY_HELPER,[test "$enable_gnome_pty_helper" != no])
-
 AC_PATH_PROG([GLIB_GENMARSHAL],[glib-genmarshal])
 AC_PATH_PROG([GLIB_MKENUMS],[glib-mkenums])
 
@@ -479,7 +432,6 @@ python/Makefile
 python/pyvte.pc
 po/Makefile.in
 doc/Makefile
-doc/openi18n/Makefile
 doc/reference/Makefile
 glade/Makefile
 vte.pc

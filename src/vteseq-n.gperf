@@ -127,3 +127,5 @@ struct vteseq_n_struct {
 "send-secondary-device-attributes", VTE_SEQUENCE_HANDLER(vte_sequence_handler_send_secondary_device_attributes)
 #"change-mouse-cursor-background-colors", VTE_SEQUENCE_HANDLER_NULL
 #"change-mouse-cursor-foreground-colors", VTE_SEQUENCE_HANDLER_NULL
+"start-user-input", VTE_SEQUENCE_HANDLER(vte_sequence_handler_ui)
+"finish-user-input", VTE_SEQUENCE_HANDLER(vte_sequence_handler_ai)

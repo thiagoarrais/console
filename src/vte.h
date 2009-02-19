@@ -80,6 +80,7 @@ struct _VteTerminalClass {
 	void (*cursor_moved)(VteTerminal* terminal);
 	void (*status_line_changed)(VteTerminal* terminal);
 	void (*commit)(VteTerminal* terminal, gchar *text, guint size);
+	void (*line_received)(VteTerminal* terminal, gchar *text, guint size);
 
 	void (*deiconify_window)(VteTerminal* terminal);
 	void (*iconify_window)(VteTerminal* terminal);
@@ -125,6 +126,7 @@ struct _VteTerminalClass {
 	guint cursor_moved_signal;
 	guint status_line_changed_signal;
 	guint commit_signal;
+	guint line_received_signal;
 
 	guint deiconify_window_signal;
 	guint iconify_window_signal;
@@ -206,21 +208,14 @@ GType vte_terminal_get_type(void);
 							     VTE_TYPE_TERMINAL)
 #define VTE_TERMINAL_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), VTE_TYPE_TERMINAL, VteTerminalClass))
 
-/* You can get by with just these two functions. */
 GtkWidget *vte_terminal_new(void);
-pid_t vte_terminal_fork_command(VteTerminal *terminal,
-				const char *command, char **argv,
-				char **envv, const char *directory,
-				gboolean lastlog,
-				gboolean utmp,
-				gboolean wtmp);
 
-/* Users of libzvt may find this useful. */
-pid_t vte_terminal_forkpty(VteTerminal *terminal,
-			   char **envv, const char *directory,
-			   gboolean lastlog,
-			   gboolean utmp,
-			   gboolean wtmp);
+/* Mark a block of data (sent through vte_terminal_feed) as app data that should
+ * not be interpreted as user input */
+void vte_terminal_begin_app_output(VteTerminal *terminal);
+void vte_terminal_finish_app_output(VteTerminal *terminal);
+void vte_terminal_start_user_input(VteTerminal *terminal);
+void vte_terminal_stop_user_input(VteTerminal *terminal);
 
 /* Send data to the terminal to display, or to the terminal's forked command
  * to handle in some way.  If it's 'cat', they should be the same. */
@@ -401,6 +396,16 @@ const char *vte_terminal_get_status_line(VteTerminal *terminal);
 
 /* Get the padding the widget is using. */
 void vte_terminal_get_padding(VteTerminal *terminal, int *xpad, int *ypad);
+
+/* Flush any pending user input to listeners and reset */
+void vte_terminal_flush_pending_input(VteTerminal *terminal);
+
+/* Captures cursor movement inside pending input */
+void vte_terminal_cursor_left(VteTerminal *terminal);
+void vte_terminal_cursor_right(VteTerminal *terminal);
+
+/* Removes a single character from pending input */
+void vte_terminal_delete_current_char(VteTerminal *terminal);
 
 /* Attach an existing PTY master side to the terminal widget.  Use
  * instead of vte_terminal_fork_command(). */

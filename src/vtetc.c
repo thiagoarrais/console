@@ -28,7 +28,7 @@
  */
 typedef struct _vte_termcap
 {
-  GMappedFile *file;
+  const char *start;
   GTree *tree;
   const char *end;
 } VteTermcap;
@@ -333,100 +333,6 @@ _vte_termcap_find_boolean (VteTermcap *termcap,
   return TRUE;
 }
 
-/*
- * --- routines for building the tree from the file ---
- */
-static void
-_vte_termcap_parse_entry (GTree *termcap, const char **cnt, const char *end)
-{
-  gboolean seen_content;
-  const char *contents;
-  const char *start;
-  const char *caps;
-
-  contents = *cnt;
-
-  /* look for the start of the capabilities.
-   */
-  caps = contents;
-  while (caps != end)
-    if (*caps == ':')
-      break;
-    else
-      caps++;
-
-  if (*caps != ':')
-    return;
-
-  /* parse all of the aliases and insert one item into the termcap
-   * tree for each alias, pointing it to our caps.
-   */
-  seen_content = FALSE;
-  start = contents;
-  while (contents != end)
-  {
-    /* 
-    if (contents == end)
-    {
-       * we can't deal with end of file directly following a
-       * terminal name without any delimiters or even a newline.
-       * but honestly, what did they expect?  end of file without
-       * newline in the middle of a terminal alias with no
-       * capability definitions?  i'll doubt they notice that
-       * anything is missing.
-    }
-    */
-
-    if (*contents == '\\' && contents + 1 != end && contents[1] == '\n')
-    {
-      /* we've hit \ at the end of a line.  skip. */
-      contents++;
-    }
-    else if (*contents == '|' || *contents == ':' || *contents == '\n')
-    {
-      /* we wait to find the terminator before putting anything in
-       * the tree to ensure that _vte_termcap_strcmp will always
-       * terminate.  we also only add the alias if we've seen
-       * actual characters (not just spaces, continuations, etc)
-       */
-      if (seen_content)
-        g_tree_insert (termcap, (gpointer) start, (gpointer) caps);
-      start = contents + 1;
-      seen_content = FALSE;
-
-      /* we've either hit : and need to move on to capabilities or
-       * end of line and then there are no capabilities for this
-       * terminal.  any aliases have already been added to the tree
-       * so we can just move on.  if it was '\n' then the next while
-       * loop will exit immediately.
-       */
-      if (*contents == ':' || *contents == '\n')
-        break;
-    }
-    else if (*contents != ' ' && *contents != '\t')
-      seen_content = TRUE;
-
-    contents++;
-  }
-
-  /* we've processed all of the aliases.  now skip past the capabilities
-   * so that we're ready to go on the next entry. */
-  while (contents != end)
-  {
-    if (*contents == '\\' && contents + 1 != end && contents[1] == '\n')
-    {
-      /* we've hit \ at the end of a line.  skip. */
-      contents++;
-    }
-    else if (*contents == '\n')
-      break;
-
-    contents++;
-  }
-
-  *cnt = contents;
-}
-
 static GTree *
 _vte_termcap_parse_file (const char *contents, int length)
 {
@@ -441,54 +347,31 @@ _vte_termcap_parse_file (const char *contents, int length)
   termcap = g_tree_new_full ((GCompareDataFunc) _vte_termcap_strcmp,
                              (gpointer)":|\n", NULL, NULL);
 
-  while (contents != end)
-  {
-    switch (*contents++)
-    {
-      /* comments */
-      case '#':
-        /* eat up to (but not) the \n */
-        while (contents != end && *contents != '\n')
-          contents++;
-
-      /* whitespace */
-      case ' ':
-      case '\t':
-      case '\n':
-        continue;
-
-      default:
-        /* bring back the character */
-        contents--;
-
-        /* parse one entry (ie: one line) */
-        _vte_termcap_parse_entry (termcap, &contents, end);
-    }
-  }
+  g_tree_insert(termcap, (gpointer) (contents + 355), (gpointer) (contents + 412));
+  g_tree_insert(termcap, (gpointer) (contents + 369), (gpointer) (contents + 412));
+  g_tree_insert(termcap, (gpointer) (contents + 379), (gpointer) (contents + 412));
+  g_tree_insert(termcap, (gpointer) (contents + 1282), (gpointer) (contents + 1339));
+  g_tree_insert(termcap, (gpointer) (contents + 1295), (gpointer) (contents + 1339));
+  g_tree_insert(termcap, (gpointer) (contents + 1555), (gpointer) (contents + 1582));
+  g_tree_insert(termcap, (gpointer) (contents + 1561), (gpointer) (contents + 1582));
 
   return termcap;
 }
 
 static VteTermcap *
-_vte_termcap_create (const char *filename)
+_vte_termcap_create (void)
 {
   const char *contents;
   VteTermcap *termcap;
-  GMappedFile *file;
   int length;
 
-  file = g_mapped_file_new (filename, FALSE, NULL);
-  
-  if (file == NULL)
-    return NULL;
-
-  contents = g_mapped_file_get_contents (file);
-  length = g_mapped_file_get_length (file);
+  contents = (char*) g_slice_alloc(sizeof(char) * 1602);
+  strcpy(contents, "# This is a cut-down version of the termcap file from my box with some entries\n# removed (add them back in to override the terminal's behavior):\n# kI (Insert, Delete is handled programmatically)\n# kP/kN (Page Up, Page Down)\n# ku/kd/kl/kr (Up, Down, Left, Right)\n# k1/kd2/k3/k4/k5/k6/k7/k8/k9/k; (F1-F10)\n# K1/K2/K3/K4/K5 (KP Up, Down, Left, Right, Begin)\nxterm-xfree86|xterm-new|xterm terminal emulator (XFree86):\\\n\t:am:km:mi:ms:xn:\\\n\t:co#80:it#8:li#24:\\\n\t:AL=\\E[%dL:DC=\\E[%dP:DL=\\E[%dM:DO=\\E[%dB:IC=\\E[%d@:\\\n\t:LE=\\E[%dD:\\\n\t:RI=\\E[%dC:UP=\\E[%dA:ae=^O:al=\\E[L:as=^N:bl=^G:bt=\\E[Z:\\\n\t:cd=\\E[J:ce=\\E[K:cl=\\E[H\\E[2J:cm=\\E[%i%d;%dH:cr=^M:\\\n\t:cs=\\E[%i%d;%dr:ct=\\E[3g:dc=\\E[P:dl=\\E[M:do=^J:ec=\\E[%dX:\\\n\t:ei=\\E[4l:ho=\\E[H:im=\\E[4h:is=\\E[!p\\E[?3;4l\\E[4l\\E>:\\\n\t:kD=\\177:\\\n\t:kb=^H:ke=\\E[?1l\\E>:\\\n\t:ks=\\E[?1h\\E=:le=^H:mb=\\E[5m:md=\\E[1m:\\\n\t:me=\\E[m\\017:mr=\\E[7m:nd=\\E[C:rc=\\E8:sc=\\E7:se=\\E[27m:\\\n\t:sf=^J:so=\\E[7m:sr=\\EM:st=\\EH:ta=^I:te=\\E[?1047l\\E[?1048l:\\\n\t:ti=\\E[?1048h\\E[?1047h:ue=\\E[24m:up=\\E[A:us=\\E[4m:\\\n\t:vb=\\E[?5h\\E[?5l:ve=\\E[?25h:vi=\\E[?25l:vs=\\E[?25h:\\\n\t:ui=\\E[N:ai=\\E[O:\n# xterm-redhat is identical to xterm-xfree86 with the addition of a small\n# VT220-ism regarding the backspace and delete keys; this is mandated by\n# the keyboard configuration section of the Debian Policy Manual.\nxterm-redhat|Red Hat xterm (backspace and delete changed):\\\n\t:kD=\\E[3~:kb=\\177:tc=xterm-xfree86:\n# This is the only entry which you should have to customize, since \"xterm\"\n# is widely used for a variety of incompatible terminal emulations including\n# color_xterm and rxvt.\nxterm|X11 terminal emulator:\\\n\t:tc=xterm-redhat:\n");
 
   termcap = g_slice_new (VteTermcap);
-  termcap->file = file;
+  termcap->start = contents;
   termcap->tree = _vte_termcap_parse_file (contents, length);
-  termcap->end = contents + length;
+  termcap->end = contents + 1602;
 
   return termcap;
 }
@@ -497,7 +380,7 @@ static void
 _vte_termcap_destroy (VteTermcap *termcap)
 {
   g_tree_destroy (termcap->tree);
-  g_mapped_file_free (termcap->file);
+  g_slice_free1 (1602, (gpointer) termcap->start);
   g_slice_free (VteTermcap, termcap);
 }
 
@@ -508,7 +391,7 @@ static GStaticMutex _vte_termcap_mutex = G_STATIC_MUTEX_INIT;
 static GCache *_vte_termcap_cache = NULL;
 
 VteTermcap *
-_vte_termcap_new(const char *filename)
+_vte_termcap_new(void)
 {
   VteTermcap *result;
 
@@ -521,7 +404,7 @@ _vte_termcap_new(const char *filename)
                                      (GCacheDestroyFunc) g_free,
                                      g_str_hash, g_direct_hash, g_str_equal);
 
-  result = g_cache_insert (_vte_termcap_cache, (gpointer) filename);
+  result = g_cache_insert (_vte_termcap_cache, (gpointer) _vte_termcap_cache);
 
   g_static_mutex_unlock (&_vte_termcap_mutex);
 

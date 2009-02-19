@@ -43,7 +43,6 @@
 #include "keymap.h"
 #include "marshal.h"
 #include "matcher.h"
-#include "pty.h"
 #include "vteaccess.h"
 #include "vteint.h"
 #include "vteregex.h"
@@ -64,9 +63,12 @@ typedef gunichar wint_t;
 #define STATIC_PARAMS (G_PARAM_STATIC_NAME | G_PARAM_STATIC_NICK | G_PARAM_STATIC_BLURB)
 
 
+#ifndef LINE_MAX
+#define LINE_MAX 2048
+#endif
+
 static void vte_terminal_set_visibility (VteTerminal *terminal, GdkVisibilityState state);
-static void vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
-				     gboolean reset);
+static void vte_terminal_load_termcap(VteTerminal *terminal, gboolean reset);
 static void vte_terminal_paste(VteTerminal *terminal, GdkAtom board);
 static void vte_terminal_real_copy_clipboard(VteTerminal *terminal);
 static void vte_terminal_real_paste_clipboard(VteTerminal *terminal);
@@ -109,8 +111,6 @@ static char *vte_terminal_get_text_maybe_wrapped(VteTerminal *terminal,
 						 gpointer data,
 						 GArray *attributes,
 						 gboolean include_trailing_spaces);
-static void _vte_terminal_disconnect_pty_read(VteTerminal *terminal);
-static void _vte_terminal_disconnect_pty_write(VteTerminal *terminal);
 static void vte_terminal_stop_processing (VteTerminal *terminal);
 
 static inline gboolean vte_terminal_is_processing (VteTerminal *terminal);
@@ -936,6 +936,31 @@ vte_terminal_queue_cursor_moved(VteTerminal *terminal)
 	_vte_debug_print(VTE_DEBUG_SIGNALS,
 			"Queueing `cursor-moved'.\n");
 	terminal->pvt->cursor_moved_pending = TRUE;
+}
+
+/* Emit a "line-received" signal. */
+static void
+vte_terminal_emit_line_received(VteTerminal *terminal, const gchar *text, guint length)
+{
+	const char *result = NULL;
+	char *wrapped = NULL;
+
+	_vte_debug_print(VTE_DEBUG_SIGNALS,
+			"Emitting `line-received' of %d bytes.\n", length);
+
+	if (length == (guint)-1) {
+		length = strlen(text);
+		result = text;
+	} else {
+		result = wrapped = g_slice_alloc(length + 1);
+		memcpy(wrapped, text, length);
+		wrapped[length] = '\0';
+	}
+
+	g_signal_emit_by_name(terminal, "line-received", result, length);
+
+	if(wrapped)
+		g_slice_free1(length+1, wrapped);
 }
 
 static gboolean
@@ -2246,8 +2271,8 @@ vte_terminal_maybe_scroll_to_bottom(VteTerminal *terminal)
 static void
 _vte_terminal_setup_utf8 (VteTerminal *terminal)
 {
-  _vte_pty_set_utf8(terminal->pvt->pty_master,
-		    (strcmp(terminal->pvt->encoding, "UTF-8") == 0));
+  //_vte_pty_set_utf8(terminal->pvt->pty_master,
+	//	    (strcmp(terminal->pvt->encoding, "UTF-8") == 0));
 }
 
 /**
@@ -3289,341 +3314,16 @@ not_inserted:
 	return line_wrapped;
 }
 
-/* Catch a VteReaper child-exited signal, and if it matches the one we're
- * looking for, emit one of our own. */
-static void
-vte_terminal_catch_child_exited(VteReaper *reaper, int pid, int status,
-				VteTerminal *terminal)
-{
-	if (pid == terminal->pvt->pty_pid) {
-                GObject *object = G_OBJECT(terminal);
-
-                g_object_ref(object);
-                g_object_freeze_notify(object);
-
-		_VTE_DEBUG_IF (VTE_DEBUG_LIFECYCLE) {
-			g_printerr ("Child[%d] exited with status %d\n",
-					pid, status);
-#ifdef HAVE_SYS_WAIT_H
-			if (WIFEXITED (status)) {
-				g_printerr ("Child[%d] exit code %d.\n",
-						pid, WEXITSTATUS (status));
-			}else if (WIFSIGNALED (status)) {
-				g_printerr ("Child[%d] dies with signal %d.\n",
-						pid, WTERMSIG (status));
-			}
-#endif
-		}
-		/* Disconnect from the reaper. */
-		if (terminal->pvt->pty_reaper != NULL) {
-			g_signal_handlers_disconnect_by_func(terminal->pvt->pty_reaper,
-							     vte_terminal_catch_child_exited,
-							     terminal);
-			g_object_unref(terminal->pvt->pty_reaper);
-			terminal->pvt->pty_reaper = NULL;
-		}
-		terminal->pvt->pty_pid = -1;
-
-		/* Close out the PTY. */
-		_vte_terminal_disconnect_pty_read(terminal);
-		_vte_terminal_disconnect_pty_write(terminal);
-		if (terminal->pvt->pty_channel != NULL) {
-			g_io_channel_unref (terminal->pvt->pty_channel);
-			terminal->pvt->pty_channel = NULL;
-		}
-		if (terminal->pvt->pty_master != -1) {
-			_vte_pty_close(terminal->pvt->pty_master);
-			close(terminal->pvt->pty_master);
-			terminal->pvt->pty_master = -1;
-                
-                        g_object_notify(object, "pty");
-		}
-
-		/* Take one last shot at processing whatever data is pending,
-		 * then flush the buffers in case we're about to run a new
-		 * command, disconnecting the timeout. */
-		if (terminal->pvt->incoming != NULL) {
-			vte_terminal_process_incoming(terminal);
-			_vte_incoming_chunks_release (terminal->pvt->incoming);
-			terminal->pvt->incoming = NULL;
-			terminal->pvt->input_bytes = 0;
-		}
-		g_array_set_size(terminal->pvt->pending, 0);
-		vte_terminal_stop_processing (terminal);
-
-		/* Clear the outgoing buffer as well. */
-		_vte_buffer_clear(terminal->pvt->outgoing);
-
-		/* Tell observers what's happened. */
-                terminal->pvt->child_exit_status = status;
-		vte_terminal_emit_child_exited(terminal);
-
-                g_object_thaw_notify(object);
-                g_object_unref(object);
-
-                /* Note: terminal may be destroyed at this point */
-	}
-}
-
 static void mark_input_source_invalid(VteTerminal *terminal)
 {
 	_vte_debug_print (VTE_DEBUG_IO, "removed poll of vte_terminal_io_read\n");
 	terminal->pvt->pty_input_source = 0;
-}
-static void
-_vte_terminal_connect_pty_read(VteTerminal *terminal)
-{
-	if (terminal->pvt->pty_channel == NULL) {
-		return;
-	}
-
-	if (terminal->pvt->pty_input_source == 0) {
-		_vte_debug_print (VTE_DEBUG_IO, "polling vte_terminal_io_read\n");
-		terminal->pvt->pty_input_source =
-			g_io_add_watch_full(terminal->pvt->pty_channel,
-					    VTE_CHILD_INPUT_PRIORITY,
-					    G_IO_IN | G_IO_HUP,
-					    (GIOFunc) vte_terminal_io_read,
-					    terminal,
-					    (GDestroyNotify) mark_input_source_invalid);
-	}
 }
 
 static void mark_output_source_invalid(VteTerminal *terminal)
 {
 	_vte_debug_print (VTE_DEBUG_IO, "removed poll of vte_terminal_io_write\n");
 	terminal->pvt->pty_output_source = 0;
-}
-static void
-_vte_terminal_connect_pty_write(VteTerminal *terminal)
-{
-	if (terminal->pvt->pty_channel == NULL) {
-		terminal->pvt->pty_channel =
-			g_io_channel_unix_new(terminal->pvt->pty_master);
-	}
-
-	if (terminal->pvt->pty_output_source == 0) {
-		if (vte_terminal_io_write (terminal->pvt->pty_channel,
-					     G_IO_OUT,
-					     terminal))
-		{
-			_vte_debug_print (VTE_DEBUG_IO, "polling vte_terminal_io_write\n");
-			terminal->pvt->pty_output_source =
-				g_io_add_watch_full(terminal->pvt->pty_channel,
-						    VTE_CHILD_OUTPUT_PRIORITY,
-						    G_IO_OUT,
-						    (GIOFunc) vte_terminal_io_write,
-						    terminal,
-						    (GDestroyNotify) mark_output_source_invalid);
-		}
-	}
-}
-
-static void
-_vte_terminal_disconnect_pty_read(VteTerminal *terminal)
-{
-	if (terminal->pvt->pty_input_source != 0) {
-		_vte_debug_print (VTE_DEBUG_IO, "disconnecting poll of vte_terminal_io_read\n");
-		g_source_remove(terminal->pvt->pty_input_source);
-		terminal->pvt->pty_input_source = 0;
-	}
-}
-
-static void
-_vte_terminal_disconnect_pty_write(VteTerminal *terminal)
-{
-	if (terminal->pvt->pty_output_source != 0) {
-		_vte_debug_print (VTE_DEBUG_IO, "disconnecting poll of vte_terminal_io_write\n");
-
-		g_source_remove(terminal->pvt->pty_output_source);
-		terminal->pvt->pty_output_source = 0;
-	}
-}
-
-/* Basic wrapper around _vte_pty_open, which handles the pipefitting. */
-static pid_t
-_vte_terminal_fork_basic(VteTerminal *terminal, const char *command,
-			 char **argv, char **envv,
-			 const char *directory,
-			 gboolean lastlog, gboolean utmp, gboolean wtmp)
-{
-        GObject *object = G_OBJECT(terminal);
-	char **env_add;
-	int i, fd;
-	pid_t pid;
-	VteReaper *reaper;
-
-        g_object_freeze_notify(object);
-
-	/* Duplicate the environment, and add one more variable. */
-	i = envv ? g_strv_length(envv) : 0;
-	env_add = g_new(char *, i + 2);
-	env_add[0] = g_strdup_printf("TERM=%s", terminal->pvt->emulation);
-	for (i = 0; (envv != NULL) && (envv[i] != NULL); i++) {
-		env_add[i + 1] = g_strdup(envv[i]);
-	}
-	env_add[i + 1] = NULL;
-
-	/* Close any existing ptys. */
-	if (terminal->pvt->pty_channel != NULL) {
-		g_io_channel_unref (terminal->pvt->pty_channel);
-		terminal->pvt->pty_channel = NULL;
-	}
-	if (terminal->pvt->pty_master != -1) {
-		_vte_pty_close(terminal->pvt->pty_master);
-		close(terminal->pvt->pty_master);
-		terminal->pvt->pty_master = -1;
-
-                g_object_notify(object, "pty");
-
-	}
-
-        terminal->pvt->child_exit_status = 0;
-
-	/* Open the new pty. */
-	pid = -1;
-	fd = _vte_pty_open(&pid, env_add, command, argv, directory,
-			  terminal->column_count, terminal->row_count,
-			  lastlog, utmp, wtmp);
-	if (pid == -1 || fd == -1) {
-		g_strfreev(env_add);
-
-                g_object_thaw_notify(object);
-
-		return -1;
-	}
-
-	/* If we successfully started the process, set up to listen for its
-	 * output. */
-	if (pid != 0) {
-		/* Set this as the child's pid. */
-		terminal->pvt->pty_pid = pid;
-
-		vte_terminal_set_pty (terminal, fd);
-
-		/* Catch a child-exited signal from the child pid. */
-		reaper = vte_reaper_get();
-		vte_reaper_add_child(pid);
-		if (reaper != terminal->pvt->pty_reaper) {
-			if (terminal->pvt->pty_reaper != NULL) {
-				g_signal_handlers_disconnect_by_func(terminal->pvt->pty_reaper,
-						vte_terminal_catch_child_exited,
-						terminal);
-				g_object_unref(terminal->pvt->pty_reaper);
-			}
-			g_signal_connect(reaper, "child-exited",
-					G_CALLBACK(vte_terminal_catch_child_exited),
-					terminal);
-			terminal->pvt->pty_reaper = reaper;
-		} else
-			g_object_unref(reaper);
-	}
-
-	/* Clean up. */
-	g_strfreev(env_add);
-
-        g_object_thaw_notify(object);
-
-	/* Return the pid to the caller. */
-	return pid;
-}
-
-/**
- * vte_terminal_fork_command:
- * @terminal: a #VteTerminal
- * @command: the name of a binary to run, or %NULL to get user's shell
- * @argv: the argument list to be passed to @command, or %NULL
- * @envv: a list of environment variables to be added to the environment before
- * starting @command, or %NULL
- * @directory: the name of a directory the command should start in, or %NULL
- * @lastlog: %TRUE if the session should be logged to the lastlog
- * @utmp: %TRUE if the session should be logged to the utmp/utmpx log
- * @wtmp: %TRUE if the session should be logged to the wtmp/wtmpx log
- *
- * Starts the specified command under a newly-allocated controlling
- * pseudo-terminal.  The @argv and @envv lists should be %NULL-terminated, and
- * argv[0] is expected to be the name of the file being run, as it would be if
- * execve() were being called.  TERM is automatically set to reflect the
- * terminal widget's emulation setting.  If @lastlog, @utmp, or @wtmp are %TRUE,
- * logs the session to the specified system log files.
- *
- * Note that all file descriptors except stdin/stdout/stderr will be closed
- * before calling exec() in the child.
- * 
- * Returns: the ID of the new process
- */
-pid_t
-vte_terminal_fork_command(VteTerminal *terminal,
-			  const char *command, char **argv, char **envv,
-			  const char *directory,
-			  gboolean lastlog, gboolean utmp, gboolean wtmp)
-{
-	g_return_val_if_fail(VTE_IS_TERMINAL(terminal), -1);
-
-	/* Make the user's shell the default command. */
-	if (command == NULL) {
-		if (terminal->pvt->shell == NULL) {
-			struct passwd *pwd;
-
-			pwd = getpwuid(getuid());
-			if (pwd != NULL) {
-				terminal->pvt->shell = pwd->pw_shell;
-				_vte_debug_print(VTE_DEBUG_MISC,
-						"Using user's shell (%s).\n",
-						terminal->pvt->shell);
-			}
-		}
-		if (terminal->pvt->shell == NULL) {
-			if (getenv ("SHELL")) {
-				terminal->pvt->shell = getenv ("SHELL");
-				_vte_debug_print(VTE_DEBUG_MISC,
-					"Using $SHELL shell (%s).\n",
-						terminal->pvt->shell);
-			} else {
-				terminal->pvt->shell = "/bin/sh";
-				_vte_debug_print(VTE_DEBUG_MISC,
-						"Using default shell (%s).\n",
-						terminal->pvt->shell);
-			}
-		}
-		command = terminal->pvt->shell;
-	}
-
-	/* Start up the command and get the PTY of the master. */
-	return _vte_terminal_fork_basic(terminal, command, argv, envv,
-				        directory, lastlog, utmp, wtmp);
-}
-
-/**
- * vte_terminal_forkpty:
- * @terminal: a #VteTerminal
- * @envv: a list of environment variables to be added to the environment before
- * starting returning in the child process, or %NULL
- * @directory: the name of a directory the child process should change to, or
- * %NULL
- * @lastlog: %TRUE if the session should be logged to the lastlog
- * @utmp: %TRUE if the session should be logged to the utmp/utmpx log
- * @wtmp: %TRUE if the session should be logged to the wtmp/wtmpx log
- *
- * Starts a new child process under a newly-allocated controlling
- * pseudo-terminal.  TERM is automatically set to reflect the terminal widget's
- * emulation setting.  If @lastlog, @utmp, or @wtmp are %TRUE, logs the session
- * to the specified system log files.
- *
- * Returns: the ID of the new process in the parent, 0 in the child, and -1 if
- * there was an error
- *
- * Since: 0.11.11
- */
-pid_t
-vte_terminal_forkpty(VteTerminal *terminal,
-		     char **envv, const char *directory,
-		     gboolean lastlog, gboolean utmp, gboolean wtmp)
-{
-	g_return_val_if_fail(VTE_IS_TERMINAL(terminal), -1);
-
-	return _vte_terminal_fork_basic(terminal, NULL, NULL, envv,
-				       directory, lastlog, utmp, wtmp);
 }
 
 /* Handle an EOF from the client. */
@@ -3638,14 +3338,14 @@ vte_terminal_eof(GIOChannel *channel, VteTerminal *terminal)
 	/* Close the connections to the child -- note that the source channel
 	 * has already been dereferenced. */
 
-	_vte_terminal_disconnect_pty_read(terminal);
-	_vte_terminal_disconnect_pty_write(terminal);
+	//_vte_terminal_disconnect_pty_read(terminal);
+	//_vte_terminal_disconnect_pty_write(terminal);
 	if (terminal->pvt->pty_channel != NULL) {
 		g_io_channel_unref (terminal->pvt->pty_channel);
 		terminal->pvt->pty_channel = NULL;
 	}
 	if (terminal->pvt->pty_master != -1) {
-		_vte_pty_close(terminal->pvt->pty_master);
+		//_vte_pty_close(terminal->pvt->pty_master);
 		close(terminal->pvt->pty_master);
 		terminal->pvt->pty_master = -1;
         
@@ -4313,6 +4013,30 @@ out:
 	return again;
 }
 
+void
+vte_terminal_begin_app_output(VteTerminal *terminal)
+{
+  vte_terminal_feed(terminal, "\033[O", 3);
+}
+
+void
+vte_terminal_finish_app_output(VteTerminal *terminal)
+{
+  vte_terminal_feed(terminal, "\033[N", 3);
+}
+
+void
+vte_terminal_stop_user_input(VteTerminal *terminal)
+{
+  terminal->pvt->user_input_mode = FALSE;
+}
+
+void
+vte_terminal_start_user_input(VteTerminal *terminal)
+{
+  terminal->pvt->user_input_mode = TRUE;
+}
+
 /**
  * vte_terminal_feed:
  * @terminal: a #VteTerminal
@@ -4508,7 +4232,7 @@ vte_terminal_send(VteTerminal *terminal, const char *encoding,
 			}
 			/* If we need to start waiting for the child pty to
 			 * become available for writing, set that up here. */
-			_vte_terminal_connect_pty_write(terminal);
+			//_vte_terminal_connect_pty_write(terminal);
 		}
 		if (crcount > 0) {
 			g_free(cooked);
@@ -4566,7 +4290,7 @@ vte_terminal_feed_child_binary(VteTerminal *terminal, const char *data, glong le
 					   data, length);
 			/* If we need to start waiting for the child pty to
 			 * become available for writing, set that up here. */
-			_vte_terminal_connect_pty_write(terminal);
+			//_vte_terminal_connect_pty_write(terminal);
 		}
 	}
 }
@@ -4585,13 +4309,120 @@ vte_terminal_feed_child_using_modes(VteTerminal *terminal,
 	}
 }
 
-/* Send text from the input method to the child. */
+static void
+vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
+{
+  glong i;
+  InputNode *current_node, *last_node;
+  VteTerminalPrivate *pvt = terminal->pvt;
+
+  if (!pvt->user_input_mode) return;
+
+  current_node = (InputNode*) g_slice_alloc0(length * sizeof(InputNode));
+  last_node = pvt->input_cursor;
+  for(i = 0; i < length; ++i) {
+    InputNode *deleted_node = last_node->next;
+    current_node->charData = text[i];
+    current_node->previous = last_node;
+    last_node->next = current_node;
+    if (deleted_node) {
+      current_node->next = deleted_node->next;
+      --terminal->pvt->input_length;
+      g_slice_free(InputNode, deleted_node);
+    }
+    last_node = current_node;
+    current_node++;
+  }
+
+  terminal->pvt->input_cursor = last_node;
+  terminal->pvt->input_length += length;
+}
+
+static void vte_terminal_reset_pending_input(VteTerminal *terminal)
+{
+  InputNode *head_node = g_slice_new(InputNode);
+  head_node->previous = head_node;
+  head_node->next = NULL;
+  head_node->charData = '\0';
+
+  terminal->pvt->input_head = terminal->pvt->input_cursor = head_node;
+  terminal->pvt->input_length = 0;
+}
+
+void
+vte_terminal_flush_pending_input(VteTerminal *terminal)
+{
+  glong i;
+  gchar *input_line;
+  InputNode *current_node, *next_node;
+  VteTerminalPrivate *pvt = terminal->pvt;
+
+  if (!pvt->user_input_mode) return;
+
+  input_line = (gchar*) g_slice_alloc((pvt->input_length + 1) * sizeof(gchar));
+
+  current_node = pvt->input_head->next;
+  i = 0;
+  while(current_node) {
+    input_line[i++] = current_node->charData;
+    next_node = current_node->next;
+    g_slice_free(InputNode, current_node);
+    current_node = next_node;
+  }
+  input_line[i] = '\0';
+
+  g_slice_free(InputNode, pvt->input_head);
+  vte_terminal_emit_line_received(terminal, input_line, pvt->input_length);
+  vte_terminal_reset_pending_input(terminal);
+}
+
+void vte_terminal_cursor_left(VteTerminal *terminal) {
+  if (terminal->pvt->user_input_mode)
+    terminal->pvt->input_cursor = terminal->pvt->input_cursor->previous;
+}
+
+void vte_terminal_cursor_right(VteTerminal *terminal) {
+  InputNode *cursor = terminal->pvt->input_cursor;
+
+  if (!terminal->pvt->user_input_mode) return;
+
+  if (cursor->next) terminal->pvt->input_cursor = cursor->next;
+  else vte_terminal_store_input(terminal, " ", 1);
+}
+
+void vte_terminal_delete_current_char(VteTerminal *terminal)
+{
+  InputNode *deleted_node = terminal->pvt->input_cursor->next;
+
+  if (!terminal->pvt->user_input_mode) return;
+
+  if (deleted_node) {
+    if (deleted_node->previous)
+      deleted_node->previous->next = deleted_node->next;
+    if (deleted_node->next)
+      deleted_node->next->previous = deleted_node->previous;
+    --terminal->pvt->input_length;
+  }
+
+  g_slice_free(InputNode, deleted_node);
+}
+
+static void
+vte_terminal_user_input(VteTerminal *terminal, gchar *text)
+{
+  const int length = strlen(text);
+
+  vte_terminal_store_input(terminal, text, length);
+  vte_terminal_feed(terminal, text, length);
+}
+
+
 static void
 vte_terminal_im_commit(GtkIMContext *im_context, gchar *text, VteTerminal *terminal)
 {
 	_vte_debug_print(VTE_DEBUG_EVENTS,
 			"Input method committed `%s'.\n", text);
-	vte_terminal_feed_child_using_modes(terminal, text, -1);
+  vte_terminal_user_input(terminal, text);
 	/* Committed text was committed because the user pressed a key, so
 	 * we need to obey the scroll-on-keystroke setting. */
 	if (terminal->pvt->scroll_on_keystroke) {
@@ -4809,18 +4640,9 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 {
 	VteTerminal *terminal;
 	GdkModifierType modifiers;
-	struct _vte_termcap *termcap;
-	const char *tterm;
-	char *normal = NULL, *output;
-	gssize normal_length = 0;
-	int i;
-	const char *special = NULL;
-	struct termios tio;
 	gboolean scrolled = FALSE, steal = FALSE, modifier = FALSE, handled,
 		 suppress_meta_esc = FALSE;
 	guint keyval = 0;
-	gunichar keychar = 0;
-	char keybuf[VTE_UTF8_BPC];
 
 	terminal = VTE_TERMINAL(widget);
 
@@ -4939,57 +4761,14 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 		/* Map the key to a sequence name if we can. */
 		switch (keyval) {
 		case GDK_BackSpace:
-			switch (terminal->pvt->backspace_binding) {
-			case VTE_ERASE_ASCII_BACKSPACE:
-				normal = g_strdup("");
-				normal_length = 1;
-				suppress_meta_esc = FALSE;
-				break;
-			case VTE_ERASE_ASCII_DELETE:
-				normal = g_strdup("");
-				normal_length = 1;
-				suppress_meta_esc = FALSE;
-				break;
-			case VTE_ERASE_DELETE_SEQUENCE:
-				special = "kD";
-				suppress_meta_esc = TRUE;
-				break;
-			/* Use the tty's erase character. */
-			case VTE_ERASE_AUTO:
-			default:
-				if (terminal->pvt->pty_master != -1) {
-					if (tcgetattr(terminal->pvt->pty_master,
-						      &tio) != -1) {
-						normal = g_strdup_printf("%c",
-									 tio.c_cc[VERASE]);
-						normal_length = 1;
-					}
-				}
-				suppress_meta_esc = FALSE;
-				break;
-			}
-			handled = TRUE;
-			break;
+      vte_terminal_feed(terminal, "\033[D\033[P", 6);
+      handled = TRUE;
+      break;
 		case GDK_KP_Delete:
 		case GDK_Delete:
-			switch (terminal->pvt->delete_binding) {
-			case VTE_ERASE_ASCII_BACKSPACE:
-				normal = g_strdup("\010");
-				normal_length = 1;
-				break;
-			case VTE_ERASE_ASCII_DELETE:
-				normal = g_strdup("\177");
-				normal_length = 1;
-				break;
-			case VTE_ERASE_DELETE_SEQUENCE:
-			case VTE_ERASE_AUTO:
-			default:
-				special = "kD";
-				break;
-			}
-			handled = TRUE;
-			suppress_meta_esc = TRUE;
-			break;
+      vte_terminal_feed(terminal, "\033[P", 3);
+      handled = TRUE;
+      break;
 		case GDK_KP_Insert:
 		case GDK_Insert:
 			if (modifiers & GDK_SHIFT_MASK) {
@@ -5015,9 +4794,11 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
                             && modifiers & GDK_SHIFT_MASK) {
 				vte_terminal_scroll_lines(terminal, -1);
 				scrolled = TRUE;
-				handled = TRUE;
 				suppress_meta_esc = TRUE;
-			}
+			} else {
+        vte_terminal_feed(terminal, "\033[A", 3);
+      }
+  		handled = TRUE;
 			break;
 		case GDK_KP_Down:
 		case GDK_Down:
@@ -5025,10 +4806,22 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
                             && modifiers & GDK_SHIFT_MASK) {
 				vte_terminal_scroll_lines(terminal, 1);
 				scrolled = TRUE;
-				handled = TRUE;
 				suppress_meta_esc = TRUE;
-			}
+			} else {
+        vte_terminal_feed(terminal, "\033[B", 3);
+      }
+			handled = TRUE;
 			break;
+		case GDK_KP_Right:
+		case GDK_Right:
+      vte_terminal_feed(terminal, "\033[C", 3);
+			handled = TRUE;
+      break;
+		case GDK_KP_Left:
+		case GDK_Left:
+      vte_terminal_feed(terminal, "\033[D", 3);
+			handled = TRUE;
+      break;
 		case GDK_KP_Page_Up:
 		case GDK_Page_Up:
 			if (modifiers & GDK_SHIFT_MASK) {
@@ -5082,112 +4875,13 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				}
 			}
 			break;
+		case GDK_Return:
+		case GDK_KP_Enter:
+      handled = TRUE;
+      vte_terminal_feed(terminal, "\r\n", 2);
+      break;
 		default:
 			break;
-		}
-		/* If the above switch statement didn't do the job, try mapping
-		 * it to a literal or capability name. */
-		if (handled == FALSE && terminal->pvt->termcap != NULL) {
-			_vte_keymap_map(keyval, modifiers,
-					terminal->pvt->sun_fkey_mode,
-					terminal->pvt->hp_fkey_mode,
-					terminal->pvt->legacy_fkey_mode,
-					terminal->pvt->vt220_fkey_mode,
-					terminal->pvt->cursor_mode == VTE_KEYMODE_APPLICATION,
-					terminal->pvt->keypad_mode == VTE_KEYMODE_APPLICATION,
-					terminal->pvt->termcap,
-					terminal->pvt->emulation ?
-					terminal->pvt->emulation : vte_terminal_get_default_emulation(terminal),
-					&normal,
-					&normal_length,
-					&special);
-			/* If we found something this way, suppress
-			 * escape-on-meta. */
-			if (((normal != NULL) && (normal_length > 0)) ||
-			    (special != NULL)) {
-				suppress_meta_esc = TRUE;
-			}
-		}
-		/* If we didn't manage to do anything, try to salvage a
-		 * printable string. */
-		if (handled == FALSE && normal == NULL && special == NULL) {
-			if (event->group &&
-					(modifiers & GDK_CONTROL_MASK))
-				keyval = vte_translate_national_ctrlkeys(event);
-
-			/* Convert the keyval to a gunichar. */
-			keychar = gdk_keyval_to_unicode(keyval);
-			normal_length = 0;
-			if (keychar != 0) {
-				/* Convert the gunichar to a string. */
-				normal_length = g_unichar_to_utf8(keychar,
-								  keybuf);
-				if (normal_length != 0) {
-					normal = g_malloc(normal_length + 1);
-					memcpy(normal, keybuf, normal_length);
-					normal[normal_length] = '\0';
-				} else {
-					normal = NULL;
-				}
-			}
-			if ((normal != NULL) &&
-			    (modifiers & GDK_CONTROL_MASK)) {
-				/* Replace characters which have "control"
-				 * counterparts with those counterparts. */
-				for (i = 0; i < normal_length; i++) {
-					if ((((guint8)normal[i]) >= 0x40) &&
-					    (((guint8)normal[i]) <  0x80)) {
-						normal[i] &= (~(0x60));
-					}
-				}
-			}
-			_VTE_DEBUG_IF (VTE_DEBUG_EVENTS) {
-				if (normal) g_printerr(
-						"Keypress, modifiers=0x%x, "
-						"keyval=0x%x, cooked string=`%s'.\n",
-						modifiers,
-						keyval, normal);
-			}
-		}
-		/* If we got normal characters, send them to the child. */
-		if (normal != NULL) {
-			if (terminal->pvt->meta_sends_escape &&
-			    !suppress_meta_esc &&
-			    (normal_length > 0) &&
-			    (modifiers & VTE_META_MASK)) {
-				vte_terminal_feed_child(terminal,
-							_VTE_CAP_ESC,
-							1);
-			}
-			if (normal_length > 0) {
-				vte_terminal_feed_child_using_modes(terminal,
-								    normal,
-								    normal_length);
-			}
-			g_free(normal);
-		} else
-		/* If the key maps to characters, send them to the child. */
-		if (special != NULL && terminal->pvt->termcap != NULL) {
-			termcap = terminal->pvt->termcap;
-			tterm = terminal->pvt->emulation;
-			normal = _vte_termcap_find_string_length(termcap,
-								 tterm,
-								 special,
-								 &normal_length);
-			_vte_keymap_key_add_key_modifiers(keyval,
-							  modifiers,
-							  terminal->pvt->sun_fkey_mode,
-							  terminal->pvt->hp_fkey_mode,
-							  terminal->pvt->legacy_fkey_mode,
-							  terminal->pvt->vt220_fkey_mode,
-							  terminal->pvt->cursor_mode == VTE_KEYMODE_APPLICATION,
-							  &normal,
-							  &normal_length);
-			output = g_strdup_printf(normal, 1);
-			vte_terminal_feed_child_using_modes(terminal,
-							    output, -1);
-			g_free(output);
-			g_free(normal);
 		}
 		/* Keep the cursor on-screen. */
 		if (!scrolled && !modifier &&
@@ -6293,7 +5987,7 @@ vte_terminal_start_selection(VteTerminal *terminal, GdkEventButton *event,
 			terminal->pvt->selection_start.row);
 
 	/* Temporarily stop caring about input from the child. */
-	_vte_terminal_disconnect_pty_read(terminal);
+	//_vte_terminal_disconnect_pty_read(terminal);
 }
 
 static long
@@ -7216,7 +6910,7 @@ vte_terminal_button_release(GtkWidget *widget, GdkEventButton *event)
 				handled = TRUE;
 			}
 			/* Reconnect to input from the child if we paused it. */
-			_vte_terminal_connect_pty_read(terminal);
+			//_vte_terminal_connect_pty_read(terminal);
 			break;
 		case 2:
 			if ((terminal->pvt->modifiers & GDK_SHIFT_MASK) ||
@@ -7665,13 +7359,13 @@ vte_terminal_refresh_size(VteTerminal *terminal)
 	int rows, columns;
 	if (terminal->pvt->pty_master != -1) {
 		/* Use an ioctl to read the size of the terminal. */
-		if (_vte_pty_get_size(terminal->pvt->pty_master, &columns, &rows) != 0) {
-			g_warning(_("Error reading PTY size, using defaults: "
-				    "%s."), strerror(errno));
-		} else {
+		//if (_vte_pty_get_size(terminal->pvt->pty_master, &columns, &rows) != 0) {
+		//	g_warning(_("Error reading PTY size, using defaults: "
+		//		    "%s."), strerror(errno));
+		//} else {
 			terminal->row_count = rows;
 			terminal->column_count = columns;
-		}
+		//}
 	}
 }
 
@@ -7701,10 +7395,10 @@ vte_terminal_set_size(VteTerminal *terminal, glong columns, glong rows)
 
 	if (terminal->pvt->pty_master != -1) {
 		/* Try to set the terminal size. */
-		if (_vte_pty_set_size(terminal->pvt->pty_master, columns, rows) != 0) {
-			g_warning(_("Error setting PTY size: %s."),
-				    strerror(errno));
-		}
+		//if (_vte_pty_set_size(terminal->pvt->pty_master, columns, rows) != 0) {
+		//	g_warning(_("Error setting PTY size: %s."),
+		//		    strerror(errno));
+		//}
 		/* Read the terminal size, in case something went awry. */
 		vte_terminal_refresh_size(terminal);
 	} else {
@@ -7821,8 +7515,8 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 	terminal->pvt->emulation = g_intern_string(emulation);
 	_vte_debug_print(VTE_DEBUG_MISC,
 			"Setting emulation to `%s'...\n", emulation);
-	/* Find and read the right termcap file. */
-	vte_terminal_set_termcap(terminal, NULL, FALSE);
+	/* Load the (static) termcap info. */
+	vte_terminal_load_termcap(terminal, FALSE);
 
 	/* Create a table to hold the control sequences. */
 	if (terminal->pvt->matcher != NULL) {
@@ -7921,48 +7615,21 @@ _vte_terminal_inline_error_message(VteTerminal *terminal, const char *format, ..
 	g_free (str);
 }
 
-/* Set the path to the termcap file we read, and read it in. */
 static void
-vte_terminal_set_termcap(VteTerminal *terminal, const char *path,
-			 gboolean reset)
+vte_terminal_load_termcap(VteTerminal *terminal, gboolean reset)
 {
         GObject *object = G_OBJECT(terminal);
-	struct stat st;
-	char *wpath;
-
-	if (path == NULL) {
-		wpath = g_strdup_printf(DATADIR "/" PACKAGE "/termcap/%s",
-					terminal->pvt->emulation ?
-					terminal->pvt->emulation :
-					vte_terminal_get_default_emulation(terminal));
-		if (g_stat(wpath, &st) != 0) {
-			g_free(wpath);
-			wpath = g_strdup("/etc/termcap");
-		}
-		path = g_intern_string (wpath);
-		g_free(wpath);
-	} else {
-		path = g_intern_string (path);
-	}
-	if (path == terminal->pvt->termcap_path) {
-		return;
-	}
 
         g_object_freeze_notify(object);
 
-	terminal->pvt->termcap_path = path;
-
-	_vte_debug_print(VTE_DEBUG_MISC, "Loading termcap `%s'...",
-			terminal->pvt->termcap_path);
 	if (terminal->pvt->termcap != NULL) {
 		_vte_termcap_free(terminal->pvt->termcap);
 	}
-	terminal->pvt->termcap = _vte_termcap_new(terminal->pvt->termcap_path);
+	terminal->pvt->termcap = _vte_termcap_new();
 	_vte_debug_print(VTE_DEBUG_MISC, "\n");
 	if (terminal->pvt->termcap == NULL) {
 		_vte_terminal_inline_error_message(terminal,
-				"Failed to load terminal capabilities from '%s'",
-				terminal->pvt->termcap_path);
+				"Failed to load terminal capabilities");
 	}
 	if (reset) {
 		vte_terminal_set_emulation(terminal, terminal->pvt->emulation);
@@ -8139,6 +7806,9 @@ vte_terminal_init(VteTerminal *terminal)
 	pvt->selection_block_mode = FALSE;
 	pvt->has_fonts = FALSE;
 	pvt->root_pixmap_changed_tag = 0;
+
+  pvt->user_input_mode = TRUE;
+  vte_terminal_reset_pending_input(terminal);
 
 	/* Not all backends generate GdkVisibilityNotify, so mark the
 	 * window as unobscured initially. */
@@ -8553,14 +8223,6 @@ vte_terminal_finalize(GObject *object)
 		terminal->pvt->outgoing_conv = VTE_INVALID_CONV;
 	}
 
-	/* Stop listening for child-exited signals. */
-	if (terminal->pvt->pty_reaper != NULL) {
-		g_signal_handlers_disconnect_by_func(terminal->pvt->pty_reaper,
-						     vte_terminal_catch_child_exited,
-						     terminal);
-		g_object_unref(terminal->pvt->pty_reaper);
-	}
-
 	/* Stop processing input. */
 	vte_terminal_stop_processing (terminal);
 
@@ -8570,24 +8232,13 @@ vte_terminal_finalize(GObject *object)
 	g_array_free(terminal->pvt->pending, TRUE);
 	_vte_buffer_free(terminal->pvt->conv_buffer);
 
-	/* Stop the child and stop watching for input from the child. */
-	if (terminal->pvt->pty_pid != -1) {
-#ifdef HAVE_GETPGID
-		pid_t pgrp;
-		pgrp = getpgid(terminal->pvt->pty_pid);
-		if (pgrp != -1) {
-			kill(-pgrp, SIGHUP);
-		}
-#endif
-		kill(terminal->pvt->pty_pid, SIGHUP);
-	}
-	_vte_terminal_disconnect_pty_read(terminal);
-	_vte_terminal_disconnect_pty_write(terminal);
+	//_vte_terminal_disconnect_pty_read(terminal);
+	//_vte_terminal_disconnect_pty_write(terminal);
 	if (terminal->pvt->pty_channel != NULL) {
 		g_io_channel_unref (terminal->pvt->pty_channel);
 	}
 	if (terminal->pvt->pty_master != -1) {
-		_vte_pty_close(terminal->pvt->pty_master);
+		//_vte_pty_close(terminal->pvt->pty_master);
 		close(terminal->pvt->pty_master);
 	}
 
@@ -11333,6 +10984,7 @@ vte_terminal_class_init(VteTerminalClass *klass)
 	klass->cursor_moved = NULL;
 	klass->status_line_changed = NULL;
 	klass->commit = NULL;
+  klass->line_received = NULL;
 
 	klass->deiconify_window = NULL;
 	klass->iconify_window = NULL;
@@ -11435,6 +11087,15 @@ vte_terminal_class_init(VteTerminalClass *klass)
 			     NULL,
 			     _vte_marshal_VOID__STRING_UINT,
 			     G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_UINT);
+	klass->line_received_signal =
+		g_signal_new("line-received",
+			     G_OBJECT_CLASS_TYPE(klass),
+			     G_SIGNAL_RUN_LAST,
+			     G_STRUCT_OFFSET(VteTerminalClass, line_received),
+			     NULL,
+			     NULL,
+			     _vte_marshal_VOID__STRING,
+			     G_TYPE_NONE, 1, G_TYPE_STRING);
 	klass->emulation_changed_signal =
                 g_signal_new(I_("emulation-changed"),
 			     G_OBJECT_CLASS_TYPE(klass),
@@ -13560,7 +13221,7 @@ vte_terminal_set_pty(VteTerminal *terminal, int pty_master)
 	       g_io_channel_unref (terminal->pvt->pty_channel);
        }
        if (terminal->pvt->pty_master != -1) {
-               _vte_pty_close (terminal->pvt->pty_master);
+               //_vte_pty_close (terminal->pvt->pty_master);
                close (terminal->pvt->pty_master);
        }
        terminal->pvt->pty_master = pty_master;
@@ -13568,20 +13229,11 @@ vte_terminal_set_pty(VteTerminal *terminal, int pty_master)
        g_io_channel_set_close_on_unref (terminal->pvt->pty_channel, FALSE);
 
 
-       /* Set the pty to be non-blocking. */
-       flags = fcntl (terminal->pvt->pty_master, F_GETFL);
-       if ((flags & O_NONBLOCK) == 0) {
-	       fcntl (terminal->pvt->pty_master, F_SETFL, flags | O_NONBLOCK);
-       }
-
        vte_terminal_set_size (terminal,
                               terminal->column_count,
                               terminal->row_count);
 
        _vte_terminal_setup_utf8 (terminal);
-
-       /* Open channels to listen for input on. */
-       _vte_terminal_connect_pty_read (terminal);
 
         g_object_notify(object, "pty");
 
