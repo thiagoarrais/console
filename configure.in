@@ -72,6 +72,7 @@ AM_CONDITIONAL(PLATFORM_WIN32, test "$platform_win32" = "yes")
 
 os_win32=no
 if test "x$platform_win32" = "xyes"; then
+  AC_DEFINE(X_DISPLAY_MISSING,1,[Define if you don't have an X display])
 	AC_MSG_CHECKING([for native win32])
 	case "$host" in
 		*-*-mingw*)
