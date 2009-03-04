@@ -7359,13 +7359,8 @@ vte_terminal_refresh_size(VteTerminal *terminal)
 	int rows, columns;
 	if (terminal->pvt->pty_master != -1) {
 		/* Use an ioctl to read the size of the terminal. */
-		//if (_vte_pty_get_size(terminal->pvt->pty_master, &columns, &rows) != 0) {
-		//	g_warning(_("Error reading PTY size, using defaults: "
-		//		    "%s."), strerror(errno));
-		//} else {
 			terminal->row_count = rows;
 			terminal->column_count = columns;
-		//}
 	}
 }
 
@@ -7394,11 +7389,6 @@ vte_terminal_set_size(VteTerminal *terminal, glong columns, glong rows)
 	old_columns = terminal->column_count;
 
 	if (terminal->pvt->pty_master != -1) {
-		/* Try to set the terminal size. */
-		//if (_vte_pty_set_size(terminal->pvt->pty_master, columns, rows) != 0) {
-		//	g_warning(_("Error setting PTY size: %s."),
-		//		    strerror(errno));
-		//}
 		/* Read the terminal size, in case something went awry. */
 		vte_terminal_refresh_size(terminal);
 	} else {
