@@ -28,12 +28,28 @@
 #include <gtk/gtk.h>
 #include "debug.h"
 #include "vtedraw.h"
-#include "vtepangocairo.h"
+#include "vteft2.h"
+#include "vtegl.h"
+#include "vtepango.h"
 #include "vteskel.h"
+#include "vtexft.h"
 
 static const struct _vte_draw_impl
 *_vte_draw_impls[] = {
-	&_vte_draw_pangocairo,
+#ifndef X_DISPLAY_MISSING
+#ifdef HAVE_XFT2
+	&_vte_draw_xft,
+#endif /* HAVE_XFT2 */
+#endif /* !X_DISPLAY_MISSING */
+	&_vte_draw_ft2,
+#ifndef X_DISPLAY_MISSING
+#ifdef HAVE_GL
+	&_vte_draw_gl,
+#endif /* HAVE_GL */
+#endif /* !X_DISPLAY_MISSING */
+	&_vte_draw_pango,
+#ifndef X_DISPLAY_MISSING
+#endif /* !X_DISPLAY_MISSING */
 };
 
 static gboolean
@@ -107,6 +123,14 @@ _vte_draw_init_default (struct _vte_draw *draw)
 }
 
 
+static void
+_vte_draw_update_requires_clear (struct _vte_draw *draw)
+{
+	draw->requires_clear = draw->impl->always_requires_clear
+			    || draw->bg_type != VTE_BG_SOURCE_NONE
+			    || draw->bg_opacity != 0xFFFF;
+}
+
 struct _vte_draw *
 _vte_draw_new (GtkWidget *widget)
 {
@@ -115,6 +139,8 @@ _vte_draw_new (GtkWidget *widget)
 	/* Create the structure. */
 	draw = g_slice_new0 (struct _vte_draw);
 	draw->widget = g_object_ref (widget);
+	draw->bg_type = VTE_BG_SOURCE_NONE;
+	draw->bg_opacity = 0xffff; 
 
 	/* Allow the user to specify her preferred backends */
 	if (!_vte_draw_init_user (draw) &&
@@ -125,7 +151,7 @@ _vte_draw_new (GtkWidget *widget)
 		draw->impl = &_vte_draw_skel;
 	}
 
-	draw->requires_clear = draw->impl->always_requires_clear;
+	_vte_draw_update_requires_clear (draw);
 
 	_vte_debug_print (VTE_DEBUG_DRAW,
 			"draw_new (%s)\n", draw->impl->name);
@@ -215,14 +241,18 @@ _vte_draw_end (struct _vte_draw *draw)
 }
 
 void
-_vte_draw_set_background_solid(struct _vte_draw *draw,
-			       GdkColor *color,
-			       guint16 opacity)
+_vte_draw_set_background_opacity (struct _vte_draw *draw,
+				  guint16 opacity)
 {
-	draw->requires_clear = draw->impl->always_requires_clear || opacity != 0xFFFF;
+	draw->bg_opacity = opacity;
+	_vte_draw_update_requires_clear (draw);
+}
 
-	if (draw->impl->set_background_solid)
-		draw->impl->set_background_solid (draw, color, opacity);
+void
+_vte_draw_set_background_color (struct _vte_draw *draw,
+			        GdkColor *color)
+{
+	draw->bg_color = *color;
 }
 
 void
@@ -233,24 +263,12 @@ _vte_draw_set_background_image (struct _vte_draw *draw,
 			        const GdkColor *color,
 			        double saturation)
 {
-	if (type != VTE_BG_SOURCE_NONE)
-		draw->requires_clear = TRUE;
+	draw->bg_type = type;
+	_vte_draw_update_requires_clear (draw);
 
 	if (draw->impl->set_background_image)
 		draw->impl->set_background_image (draw, type, pixbuf, filename,
 						  color, saturation);
-}
-
-void
-_vte_draw_set_background_scroll (struct _vte_draw *draw,
-				 gint x, gint y)
-{
-	_vte_debug_print (VTE_DEBUG_DRAW,
-			"draw_set_scroll (%d, %d)\n",
-			x, y);
-
-	if (draw->impl->set_background_scroll)
-		draw->impl->set_background_scroll (draw, x, y);
 }
 
 gboolean
@@ -312,7 +330,7 @@ _vte_draw_get_text_metrics(struct _vte_draw *draw,
 }
 
 int
-_vte_draw_get_char_width (struct _vte_draw *draw, vteunistr c, int columns,
+_vte_draw_get_char_width (struct _vte_draw *draw, gunichar c, int columns,
 			  gboolean bold)
 {
 	int width = 0;
@@ -386,11 +404,11 @@ _vte_draw_char (struct _vte_draw *draw,
 	return has_char;
 }
 gboolean
-_vte_draw_has_char (struct _vte_draw *draw, vteunistr c, gboolean bold)
+_vte_draw_has_char (struct _vte_draw *draw, gunichar c, gboolean bold)
 {
 	gboolean has_char = TRUE;
 
-	_vte_debug_print (VTE_DEBUG_DRAW, "draw_has_char ('0x%04X', %s)\n", c,
+	_vte_debug_print (VTE_DEBUG_DRAW, "draw_has_char ('%c', %s)\n", c,
 			  bold ? "bold" : "normal");
 
 	if (draw->impl->has_char)
@@ -441,4 +459,15 @@ _vte_draw_draw_rectangle (struct _vte_draw *draw,
 			_vte_draw_fill_rectangle (draw, x+width-1, y, 1, height-1, color, alpha);
 		}
 	}
+}
+
+void
+_vte_draw_set_scroll (struct _vte_draw *draw, gint x, gint y)
+{
+	_vte_debug_print (VTE_DEBUG_DRAW,
+			"draw_set_scroll (%d, %d)\n",
+			x, y);
+
+	draw->scrollx = x;
+	draw->scrolly = y;
 }

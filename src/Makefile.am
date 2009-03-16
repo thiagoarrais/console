@@ -1,4 +1,3 @@
-
 EXTRA_DIST = iso2022.txt
 
 
@@ -61,11 +60,23 @@ libvte_la_SOURCES = \
 	vteconv.h \
 	vtedraw.c \
 	vtedraw.h \
+	vtefc.c \
+	vtefc.h \
+	vteft2.c \
+	vteft2.h \
+	vtegl.c \
+	vtegl.h \
+	vteglyph.c \
+	vteglyph.h \
 	vteint.h \
-	vtepangocairo.c \
-	vtepangocairo.h \
+	vtepango.c \
+	vtepango.h \
+	vterdb.c \
+	vterdb.h \
 	vteregex.c \
 	vteregex.h \
+	vtergb.c \
+	vtergb.h \
 	vteseq.c \
 	vteseq-list.h \
 	vteskel.c \
@@ -76,10 +87,14 @@ libvte_la_SOURCES = \
 	vtetree.h \
 	vtetypebuiltins.c \
 	vtetypebuiltins.h \
-	vteunistr.c \
-	vteunistr.h \
 	vteversion.h
 	$(NULL)
+
+if BUILD_XFT
+libvte_la_SOURCES += \
+	vtexft.c \
+	vtexft.h
+endif
 
 libvte_la_CPPFLAGS = \
 	-DG_DISABLE_ASSERT \
@@ -143,13 +158,13 @@ vteseq-list.h: vteseq-2.gperf vteseq-n.gperf
 bin_PROGRAMS = vte
 
 vte_SOURCES = vteapp.c
-vte_CFLAGS = $(VTE_CFLAGS)
-vte_LDADD = libvte.la $(VTE_LIBS)
+vte_CFLAGS = $(VTE_CFLAGS) $(X_CFLAGS)
+vte_LDADD = libvte.la $(LIBS) $(VTE_LIBS) $(X_LIBS)
 
 
 # Misc unit tests and utilities
 
-pkglib_PROGRAMS = interpret
+pkglib_PROGRAMS = interpret vterdb
 pkglib_SCRIPTS = decset osc window
 EXTRA_DIST += $(pkglib_SCRIPTS)
 
@@ -163,14 +178,14 @@ AM_CFLAGS = $(GLIB_CFLAGS) $(GOBJECT_CFLAGS)
 LDADD = $(GLIB_LIBS) $(GOBJECT_LIBS)
 
 reflect_text_view_CPPFLAGS = -DUSE_TEXT_VIEW
-reflect_text_view_CFLAGS = $(VTE_CFLAGS)
+reflect_text_view_CFLAGS = $(VTE_CFLAGS) $(X_CFLAGS)
 reflect_text_view_SOURCES = reflect.c
-reflect_text_view_LDADD = $(VTE_LIBS)
+reflect_text_view_LDADD = $(LIBS) $(VTE_LIBS) $(X_LIBS)
 
 reflect_vte_CPPFLAGS = -DUSE_VTE
-reflect_vte_CFLAGS = $(VTE_CFLAGS)
+reflect_vte_CFLAGS = $(VTE_CFLAGS) $(X_CFLAGS)
 reflect_vte_SOURCES = reflect.c
-reflect_vte_LDADD = libvte.la $(VTE_LIBS)
+reflect_vte_LDADD = libvte.la $(LIBS) $(VTE_LIBS) $(X_LIBS)
 
 interpret_SOURCES = \
 	buffer.c \
@@ -223,7 +238,7 @@ iso2022_SOURCES = \
 	vtetree.h
 iso2022_CPPFLAGS = -DISO2022_MAIN
 iso2022_CFLAGS = $(GTK_CFLAGS)
-iso2022_LDADD = $(GTK_LIBS)
+iso2022_LDADD = $(LIBS) $(GTK_LIBS)
 
 ring_SOURCES = ring.c ring.h debug.c debug.h
 ring_CPPFLAGS = -DRING_MAIN
@@ -247,7 +262,7 @@ table_SOURCES = \
 	vtetc.h
 table_CPPFLAGS = -DTABLE_MAIN
 table_CFLAGS = $(VTE_CFLAGS)
-table_LDADD = $(VTE_LIBS)
+table_LDADD = $(LIBS) $(VTE_LIBS)
 
 trie_SOURCES = \
 	trie.c \
@@ -268,15 +283,19 @@ trie_SOURCES = \
 	vtetc.h 
 trie_CPPFLAGS = -DTRIE_MAIN
 trie_CFLAGS = $(VTE_CFLAGS)
-trie_LDADD = $(VTE_LIBS)
+trie_LDADD = $(LIBS) $(VTE_LIBS)
 
 vtetc_SOURCES = vtetc.c vtetc.h debug.c debug.h
 vtetc_CPPFLAGS = -DTERMCAP_MAIN
 
+vterdb_CFLAGS = $(GTK_CFLAGS) $(X_CFLAGS) -DVTERDB_MAIN
+vterdb_SOURCES = vterdb.c
+vterdb_LDADD = $(LDFLAGS) $(LIBS) $(GTK_LIBS)
+
 vteconv_SOURCES = buffer.c buffer.h debug.c debug.h vteconv.c vteconv.h
 vteconv_CPPFLAGS = -DVTECONV_MAIN
 vteconv_CFLAGS = $(VTE_CFLAGS)
-vteconv_LDADD = $(VTE_LIBS)
+vteconv_LDADD = $(LIBS) $(VTE_LIBS)
 
 buffer_SOURCES = buffer.c
 buffer_CPPFLAGS = -DBUFFER_MAIN

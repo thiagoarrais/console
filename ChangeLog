@@ -222,35 +222,11 @@
 	* src/iso2022.c (_vte_iso2022_ambiguous_width): Avoid pointers in the
 	const array.
 
-2008-12-12  Behdad Esfahbod  <behdad@gnome.org>
-
-	Bug 149631 – gnome-terminal doesn't combine combining chars in utf8
-
-	* src/vteunistr.c:
-	* src/vteunistr.h:
-	An extended UTF-32 type that assigns numeric values to UTF-8 sequences
-	on demand.  Can be used to efficiently store a string, instead of one
-	character, at each cell.
-
-	* src/vte-private.h:
-	* src/vte.c:
-	* src/vtedraw.c:
-	* src/vtedraw.h:
-	* src/vtepangocairo.c:
-	Port to vteunistr instead of gunichar for cell content.
-	
-	* src/vte.c:
-	Handle zerowidth insertions by sticking it on the previous cell.
-
-	* src/iso2022.h:
-	* src/iso2022.c:
-	Cleanup ambiguous-width handling.  Handle zero-width chars.
-
 2008-12-11  Christian Persch  <chpe@gnome.org>
 
 	Bug 564057 – src/pty.c does not compile with
 	--disable-gnome-pty-helper
-	
+
 	* src/pty.c: Build with --disable-gnome-pty-helper. Patch by
 	yselkowitz at users.sourceforge.net .
 
@@ -264,33 +240,8 @@
 	Bug 562695 - ship pkg-config file for python bindings
 
 	* configure.in:
-	* python/Makefile.am:
+        * python/Makefile.am:
 	* python/pyvte.pc.in:
-
-2008-12-08  Behdad Esfahbod  <behdad@gnome.org>
-
-	Bug 563752 – pangocairo backend recreates cairo_surface_t for
-	background drawing
-
-	* src/vte.c (vte_terminal_paint),
-	(vte_terminal_set_scroll_background),
-	(vte_terminal_background_update):
-	* src/vtedraw.c (_vte_draw_new), (_vte_draw_set_background_solid),
-	(_vte_draw_set_background_image),
-	(_vte_draw_set_background_scroll), (_vte_draw_draw_rectangle):
-	* src/vtedraw.h:
-	* src/vtepangocairo.c (_vte_pangocairo_destroy),
-	(_vte_pangocairo_set_background_solid),
-	(_vte_pangocairo_set_background_image),
-	(_vte_pangocairo_set_background_scroll), (_vte_pangocairo_clear),
-	(_vte_pangocairo_clip), (set_source_color_alpha):
-	* src/vteskel.c:
-	Cleanup vte_draw background API.  Use a cached cairo_pattern_t in
-	pangocairo backend.
-
-	Also, queue background update on scroll_background change.
-
-2008-12-07  Behdad Esfahbod  <behdad@gnome.org>
 
 	Bug 163213 – Cursor should remain visible when selected
 
@@ -946,10 +897,6 @@
 
 2008-11-30  Christian Persch  <chpe@gnome.org>
 
-	* acinclude.m4: Remove FT2 check macro.
-
-2008-11-30  Christian Persch  <chpe@gnome.org>
-
 	Bug 540951 – The gnome-pty-helper is spawn when its not needed
 	
 	* src/pty.c: (_vte_pty_open): Don't use the pty helper when we don't
@@ -1384,14 +1331,6 @@
 	* src/Makefile.am: Don't add LDFLAGS to *_LDADD, that's wrong and
 	broken.
 
-2008-11-22  Christian Persch  <chpe@gnome.org>
-
-	* configure.in:
-	* src/Makefile.am:
-	* vte-uninstalled.pc.in:
-	* vte.pc.in: Remove more configure cruft: OTHERCFLAGS, OTHERLIBS,
-	X_CFLAGS and X_LIBS.
-
 2008-11-21  Christian Persch  <chpe@gnome.org>
 
         * src/vtepangocairo.c: (font_info_destroy_delayed),
@@ -1438,45 +1377,6 @@
 	(font_info_allocate), (font_info_free),
 	(font_info_find_for_context):
 	Make profiling messages print the info pointer.
-
-2008-11-20  Behdad Esfahbod  <behdad@gnome.org>
-
-	* configure.in:  Remove more cruft.
-
-2008-11-20  Behdad Esfahbod  <behdad@gnome.org>
-
-	Bug 560819 – Remove obsolete backends
-
-	* configure.in:
-	* src/Makefile.am:
-	* src/vtebg.c (vte_bg_get_pixmap):
-	* src/vtebg.h:
-	* src/vtedraw.c:
-	* src/vtefc.c:
-	* src/vtefc.h:
-	* src/vteft2.c:
-	* src/vteft2.h:
-	* src/vtegl.c:
-	* src/vtegl.h:
-	* src/vteglyph.c:
-	* src/vteglyph.h:
-	* src/vterdb.c:
-	* src/vterdb.h:
-	* src/vtergb.c:
-	* src/vtergb.h:
-	* src/vtexft.c:
-	* src/vtexft.h:
-	Remove all backends except for pangocairo.  Saves so much code.
-
-2008-11-20  Behdad Esfahbod  <behdad@gnome.org>
-
-	Bug 560819 – Remove obsolete backends
-
-	* src/Makefile.am:
-	* src/vtedraw.c:
-	* src/vtepango.c:
-	* src/vtepango.h:
-	Remove pango backend.
 
 2008-11-20  Behdad Esfahbod  <behdad@gnome.org>
 
@@ -1558,22 +1458,6 @@
 2008-11-14 Christian Persch <chpe@gnome.org>
 
 	* src/vteskel.c: Fix missing prototype warning.
-
-2008-11-14  Behdad Esfahbod  <behdad@gnome.org>
-
-	Bug 395599 – Add pangocairo backend
-
-	* configure.in:
-	Require pango >= 1.22.0
-
-	* src/Makefile.am:
-	* src/vtedraw.c:
-	* src/vtepangocairo.c:
-	* src/vtepangocairo.h:
-	Add a pangocairo drawing backend.  Use it by default.  This is as fast
-	as the xft backend.  Doesn't share font caches across widgets yet.
-	Also, the transparent background stuff doesn't match xft backend's
-	yet.
 
 2008-11-14  Behdad Esfahbod  <behdad@gnome.org>
 

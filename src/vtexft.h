@@ -16,8 +16,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef vte_vtepangocairo_h_included
-#define vte_vtepangocairo_h_included
+#ifndef vte_vtexft_h_included
+#define vte_vtexft_h_included
 
 /* The interfaces in this file are subject to change at any time. */
 
@@ -26,7 +26,11 @@
 
 G_BEGIN_DECLS
 
-extern const struct _vte_draw_impl _vte_draw_pangocairo;
+#ifdef HAVE_XFT2
+
+extern const struct _vte_draw_impl _vte_draw_xft;
+
+#endif
 
 G_END_DECLS
 
