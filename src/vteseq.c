@@ -692,11 +692,6 @@ vte_sequence_handler_decset_internal(VteTerminal *terminal,
 		 GINT_TO_POINTER(FALSE),
 		 GINT_TO_POINTER(TRUE),
 		 NULL, NULL,},
-		/* 7: Wraparound mode. */
-		{7, &terminal->pvt->flags.am, NULL, NULL,
-		 GINT_TO_POINTER(FALSE),
-		 GINT_TO_POINTER(TRUE),
-		 NULL, NULL,},
 		/* 8: disallowed, keyboard repeat is set by user. */
 		{8, NULL, NULL, NULL, NULL, NULL, NULL, NULL,},
 		/* 9: Send-coords-on-click. */

@@ -3119,24 +3119,18 @@ _vte_terminal_insert_char(VteTerminal *terminal, gunichar c,
 
 	/* If we're autowrapping here, do it. */
 	col = screen->cursor_current.col;
-	if (G_UNLIKELY (col + columns > terminal->column_count)) {
-		if (terminal->pvt->flags.am) {
-			_vte_debug_print(VTE_DEBUG_ADJ,
-					"Autowrapping before character\n");
-			/* Wrap. */
-			/* XXX clear to the end of line */
-			col = screen->cursor_current.col = 0;
-			/* Mark this line as soft-wrapped. */
-			row = _vte_terminal_ensure_row(terminal);
-			row->soft_wrapped = 1;
-			_vte_terminal_cursor_down (terminal);
-		} else {
-			/* Don't wrap, stay at the rightmost column. */
-			col = screen->cursor_current.col =
-				terminal->column_count - columns;
-		}
-		line_wrapped = TRUE;
-	}
+        if (G_UNLIKELY (col + columns > terminal->column_count)) {
+                _vte_debug_print(VTE_DEBUG_ADJ,
+                                "Autowrapping before character\n");
+                /* Wrap. */
+                /* XXX clear to the end of line */
+                col = screen->cursor_current.col = 0;
+                /* Mark this line as soft-wrapped. */
+                row = _vte_terminal_ensure_row(terminal);
+                row->soft_wrapped = 1;
+                _vte_terminal_cursor_down (terminal);
+                line_wrapped = TRUE;
+        }
 
 	_vte_debug_print(VTE_DEBUG_PARSE,
 			"Inserting %ld '%c' (%d/%d) (%ld+%d, %ld), delta = %ld; ",
@@ -3226,7 +3220,7 @@ _vte_terminal_insert_char(VteTerminal *terminal, gunichar c,
 	/* If we're autowrapping *here*, do it. */
 	screen->cursor_current.col = col;
 	if (G_UNLIKELY (col >= terminal->column_count)) {
-		if (terminal->pvt->flags.am && !terminal->pvt->flags.xn) {
+		if (!terminal->pvt->flags.xn) {
 			/* Wrap. */
 			screen->cursor_current.col = 0;
 			/* Mark this line as soft-wrapped. */
@@ -7449,9 +7443,6 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 
 	if (terminal->pvt->termcap != NULL) {
 		/* Read emulation flags. */
-		terminal->pvt->flags.am = _vte_termcap_find_boolean(terminal->pvt->termcap,
-								    terminal->pvt->emulation,
-								    "am");
 		terminal->pvt->flags.bw = _vte_termcap_find_boolean(terminal->pvt->termcap,
 								    terminal->pvt->emulation,
 								    "bw");
