@@ -5032,7 +5032,7 @@ vte_terminal_paste_cb(GtkClipboard *clipboard, const gchar *text, gpointer data)
 				p++;
 			}
 		}
-		vte_terminal_feed_child(terminal, paste, length);
+		vte_terminal_user_input(terminal, paste);
 		g_free(paste);
 	}
 }
