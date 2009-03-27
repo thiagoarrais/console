@@ -4242,10 +4242,10 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
 
   if (!pvt->user_input_mode) return;
 
-  current_node = (InputNode*) g_slice_alloc0(length * sizeof(InputNode));
   last_node = pvt->input_cursor;
   for(i = 0; i < length; ++i) {
     InputNode *deleted_node = last_node->next;
+    current_node = g_slice_new0(InputNode);
     current_node->charData = text[i];
     current_node->previous = last_node;
     last_node->next = current_node;
@@ -4255,7 +4255,6 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
       g_slice_free(InputNode, deleted_node);
     }
     last_node = current_node;
-    current_node++;
   }
 
   terminal->pvt->input_cursor = last_node;
@@ -4298,6 +4297,7 @@ vte_terminal_flush_pending_input(VteTerminal *terminal)
   g_slice_free(InputNode, pvt->input_head);
   vte_terminal_emit_line_received(terminal, input_line, pvt->input_length);
   vte_terminal_reset_pending_input(terminal);
+  g_slice_free1(i + 1, input_line);
 }
 
 void vte_terminal_cursor_left(VteTerminal *terminal) {
