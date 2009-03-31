@@ -217,6 +217,10 @@ void vte_terminal_finish_app_output(VteTerminal *terminal);
 void vte_terminal_start_user_input(VteTerminal *terminal);
 void vte_terminal_stop_user_input(VteTerminal *terminal);
 
+/* Mess with the command history buffer */
+void vte_terminal_command_history_back(VteTerminal *terminal);
+void vte_terminal_command_history_forward(VteTerminal *terminal);
+
 /* Send data to the terminal to display, or to the terminal's forked command
  * to handle in some way.  If it's 'cat', they should be the same. */
 void vte_terminal_feed(VteTerminal *terminal, const char *data, glong length);

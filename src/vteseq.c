@@ -1047,6 +1047,13 @@ vte_sequence_handler_as (VteTerminal *terminal, GValueArray *params)
 	terminal->pvt->screen->alternate_charset = TRUE;
 }
 
+/* Rewind command history */
+static void
+vte_sequence_handler_bk (VteTerminal *terminal, GValueArray *params)
+{
+	vte_terminal_command_history_back(terminal);
+}
+
 /* Beep. */
 static void
 vte_sequence_handler_bl (VteTerminal *terminal, GValueArray *params)
@@ -1660,6 +1667,13 @@ static void
 vte_sequence_handler_fs (VteTerminal *terminal, GValueArray *params)
 {
 	terminal->pvt->screen->status_line = FALSE;
+}
+
+/* Forward command history */
+static void
+vte_sequence_handler_fw (VteTerminal *terminal, GValueArray *params)
+{
+	vte_terminal_command_history_forward(terminal);
 }
 
 /* Move the cursor to the home position. */

@@ -4279,6 +4279,7 @@ vte_terminal_flush_pending_input(VteTerminal *terminal)
   glong i;
   gchar *input_line;
   InputNode *current_node, *next_node;
+  VteCommandHistoryNode *cmd;
   VteTerminalPrivate *pvt = terminal->pvt;
 
   if (!pvt->user_input_mode) return;
@@ -4295,10 +4296,19 @@ vte_terminal_flush_pending_input(VteTerminal *terminal)
   }
   input_line[i] = '\0';
 
+	cmd = g_slice_new0(VteCommandHistoryNode);
+	if (pvt->last_cmd) {
+		pvt->last_cmd->next = cmd;
+		cmd->previous = pvt->last_cmd;
+	} else {
+		cmd->previous = cmd;
+	}
+	cmd->data = input_line;
+	pvt->last_cmd = cmd;
+
   g_slice_free(InputNode, pvt->input_head);
   vte_terminal_emit_line_received(terminal, input_line, pvt->input_length);
   vte_terminal_reset_pending_input(terminal);
-  g_slice_free1(i + 1, input_line);
 }
 
 void vte_terminal_cursor_left(VteTerminal *terminal) {
@@ -4401,6 +4411,28 @@ vte_terminal_im_preedit_changed(GtkIMContext *im_context, VteTerminal *terminal)
 	terminal->pvt->im_preedit_cursor = cursor;
 
 	_vte_invalidate_cursor_once(terminal, FALSE);
+}
+
+void
+vte_terminal_command_history_back(VteTerminal *terminal)
+{
+	VteCommandHistoryNode *history = terminal->pvt->cmd_history;
+	if (!history) {
+		terminal->pvt->cmd_history = history = terminal->pvt->last_cmd;
+	} else {
+		terminal->pvt->cmd_history = history = history->previous;
+	}
+	vte_terminal_user_input(terminal, history->data);
+}
+
+void
+vte_terminal_command_history_forward(VteTerminal *terminal)
+{
+	if (!terminal->pvt->cmd_history) return;
+	VteCommandHistoryNode *history = terminal->pvt->cmd_history->next;
+	if (!history) return;
+	terminal->pvt->cmd_history = history;
+	vte_terminal_user_input(terminal, history->data);
 }
 
 /* Handle the toplevel being reconfigured. */
@@ -4721,9 +4753,9 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				suppress_meta_esc = TRUE;
 			} else {
-        vte_terminal_feed(terminal, "\033[A", 3);
-      }
-  		handled = TRUE;
+				vte_terminal_feed(terminal, "\033[2K\r\033[U", 8);
+			}
+			handled = TRUE;
 			break;
 		case GDK_KP_Down:
 		case GDK_Down:
@@ -4733,8 +4765,8 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				suppress_meta_esc = TRUE;
 			} else {
-        vte_terminal_feed(terminal, "\033[B", 3);
-      }
+        			vte_terminal_feed(terminal, "\033[2K\r\033[V", 8);
+			}
 			handled = TRUE;
 			break;
 		case GDK_KP_Right:
@@ -7722,8 +7754,8 @@ vte_terminal_init(VteTerminal *terminal)
 	pvt->has_fonts = FALSE;
 	pvt->root_pixmap_changed_tag = 0;
 
-  pvt->user_input_mode = TRUE;
-  vte_terminal_reset_pending_input(terminal);
+	pvt->user_input_mode = TRUE;
+	vte_terminal_reset_pending_input(terminal);
 
 	/* Not all backends generate GdkVisibilityNotify, so mark the
 	 * window as unobscured initially. */

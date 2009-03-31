@@ -129,3 +129,5 @@ struct vteseq_n_struct {
 #"change-mouse-cursor-foreground-colors", VTE_SEQUENCE_HANDLER_NULL
 "start-user-input", VTE_SEQUENCE_HANDLER(vte_sequence_handler_ui)
 "finish-user-input", VTE_SEQUENCE_HANDLER(vte_sequence_handler_ai)
+"command-history-previous", VTE_SEQUENCE_HANDLER(vte_sequence_handler_bk)
+"command-history-next", VTE_SEQUENCE_HANDLER(vte_sequence_handler_fw)

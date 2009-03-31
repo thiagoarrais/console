@@ -190,6 +190,12 @@ typedef struct InputNode {
   struct InputNode *next;
 } InputNode;
 
+typedef struct VteCommandHistoryNode {
+	gchar *data;
+	struct VteCommandHistoryNode *previous;
+	struct VteCommandHistoryNode *next;
+} VteCommandHistoryNode;
+
 /* Terminal private data. */
 struct _VteTerminalPrivate {
 	/* Emulation setup data. */
@@ -429,13 +435,17 @@ struct _VteTerminalPrivate {
 	glong underline_position;
 	glong strikethrough_position;
 
-  /* Pending user input */
-  InputNode *input_cursor;
-  InputNode *input_head;
-  glong input_length;
+	/* Pending user input */
+	InputNode *input_cursor;
+	InputNode *input_head;
+	glong input_length;
 
-  /* Is the data being fed by the user or by the app? */
-  gboolean user_input_mode;
+	/* Command history */
+	VteCommandHistoryNode *cmd_history;
+	VteCommandHistoryNode *last_cmd;
+
+	/* Is the data being fed by the user or by the app? */
+	gboolean user_input_mode;
 };
 
 

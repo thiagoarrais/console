@@ -112,6 +112,7 @@ struct _vte_capability_quark _vte_terminal_capability_strings[] = {
 	{"as", FALSE, 0},
 
 	{"bc", FALSE, 0},
+	{"bk", FALSE, 0},
 	{"bl", FALSE, 0},
 	{"bt", FALSE, 0},
 
@@ -199,6 +200,7 @@ struct _vte_capability_quark _vte_terminal_capability_strings[] = {
 
 	{"ff", FALSE, 0},
 	{"fs", FALSE, 0},
+	{"fw", FALSE, 0},
 
 	{"hd", FALSE, 0},
 	{"ho", FALSE, 0},
@@ -459,6 +461,8 @@ struct _vte_capability_string _vte_xterm_capability_strings[] = {
 	{CSI "T", "scroll-down", 0},
 	{CSI "%dT", "scroll-down", 0},
 	{CSI "%d;%d;%d;%d;%dT", "initiate-hilite-mouse-tracking", 0},
+	{CSI "U", "command-history-previous", 0},
+	{CSI "V", "command-history-next", 0},
 	{CSI "X", "erase-characters", 0},
 	{CSI "%dX", "erase-characters", 0},
 	{CSI "Z", "cursor-back-tab", 0},

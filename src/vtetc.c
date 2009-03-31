@@ -350,10 +350,10 @@ _vte_termcap_parse_file (const char *contents, int length)
   g_tree_insert(termcap, (gpointer) (contents + 355), (gpointer) (contents + 412));
   g_tree_insert(termcap, (gpointer) (contents + 369), (gpointer) (contents + 412));
   g_tree_insert(termcap, (gpointer) (contents + 379), (gpointer) (contents + 412));
-  g_tree_insert(termcap, (gpointer) (contents + 1282), (gpointer) (contents + 1339));
-  g_tree_insert(termcap, (gpointer) (contents + 1295), (gpointer) (contents + 1339));
-  g_tree_insert(termcap, (gpointer) (contents + 1555), (gpointer) (contents + 1582));
-  g_tree_insert(termcap, (gpointer) (contents + 1561), (gpointer) (contents + 1582));
+  g_tree_insert(termcap, (gpointer) (contents + 1298), (gpointer) (contents + 1355));
+  g_tree_insert(termcap, (gpointer) (contents + 1311), (gpointer) (contents + 1355));
+  g_tree_insert(termcap, (gpointer) (contents + 1571), (gpointer) (contents + 1598));
+  g_tree_insert(termcap, (gpointer) (contents + 1577), (gpointer) (contents + 1598));
 
   return termcap;
 }
@@ -365,13 +365,13 @@ _vte_termcap_create (void)
   VteTermcap *termcap;
   int length;
 
-  contents = (char*) g_slice_alloc(sizeof(char) * 1602);
-  strcpy(contents, "# This is a cut-down version of the termcap file from my box with some entries\n# removed (add them back in to override the terminal's behavior):\n# kI (Insert, Delete is handled programmatically)\n# kP/kN (Page Up, Page Down)\n# ku/kd/kl/kr (Up, Down, Left, Right)\n# k1/kd2/k3/k4/k5/k6/k7/k8/k9/k; (F1-F10)\n# K1/K2/K3/K4/K5 (KP Up, Down, Left, Right, Begin)\nxterm-xfree86|xterm-new|xterm terminal emulator (XFree86):\\\n\t:am:km:mi:ms:xn:\\\n\t:co#80:it#8:li#24:\\\n\t:AL=\\E[%dL:DC=\\E[%dP:DL=\\E[%dM:DO=\\E[%dB:IC=\\E[%d@:\\\n\t:LE=\\E[%dD:\\\n\t:RI=\\E[%dC:UP=\\E[%dA:ae=^O:al=\\E[L:as=^N:bl=^G:bt=\\E[Z:\\\n\t:cd=\\E[J:ce=\\E[K:cl=\\E[H\\E[2J:cm=\\E[%i%d;%dH:cr=^M:\\\n\t:cs=\\E[%i%d;%dr:ct=\\E[3g:dc=\\E[P:dl=\\E[M:do=^J:ec=\\E[%dX:\\\n\t:ei=\\E[4l:ho=\\E[H:im=\\E[4h:is=\\E[!p\\E[?3;4l\\E[4l\\E>:\\\n\t:kD=\\177:\\\n\t:kb=^H:ke=\\E[?1l\\E>:\\\n\t:ks=\\E[?1h\\E=:le=^H:mb=\\E[5m:md=\\E[1m:\\\n\t:me=\\E[m\\017:mr=\\E[7m:nd=\\E[C:rc=\\E8:sc=\\E7:se=\\E[27m:\\\n\t:sf=^J:so=\\E[7m:sr=\\EM:st=\\EH:ta=^I:te=\\E[?1047l\\E[?1048l:\\\n\t:ti=\\E[?1048h\\E[?1047h:ue=\\E[24m:up=\\E[A:us=\\E[4m:\\\n\t:vb=\\E[?5h\\E[?5l:ve=\\E[?25h:vi=\\E[?25l:vs=\\E[?25h:\\\n\t:ui=\\E[N:ai=\\E[O:\n# xterm-redhat is identical to xterm-xfree86 with the addition of a small\n# VT220-ism regarding the backspace and delete keys; this is mandated by\n# the keyboard configuration section of the Debian Policy Manual.\nxterm-redhat|Red Hat xterm (backspace and delete changed):\\\n\t:kD=\\E[3~:kb=\\177:tc=xterm-xfree86:\n# This is the only entry which you should have to customize, since \"xterm\"\n# is widely used for a variety of incompatible terminal emulations including\n# color_xterm and rxvt.\nxterm|X11 terminal emulator:\\\n\t:tc=xterm-redhat:\n");
+  contents = (char*) g_slice_alloc(sizeof(char) * 1618);
+  strcpy(contents, "# This is a cut-down version of the termcap file from my box with some entries\n# removed (add them back in to override the terminal's behavior):\n# kI (Insert, Delete is handled programmatically)\n# kP/kN (Page Up, Page Down)\n# ku/kd/kl/kr (Up, Down, Left, Right)\n# k1/kd2/k3/k4/k5/k6/k7/k8/k9/k; (F1-F10)\n# K1/K2/K3/K4/K5 (KP Up, Down, Left, Right, Begin)\nxterm-xfree86|xterm-new|xterm terminal emulator (XFree86):\\\n\t:am:km:mi:ms:xn:\\\n\t:co#80:it#8:li#24:\\\n\t:AL=\\E[%dL:DC=\\E[%dP:DL=\\E[%dM:DO=\\E[%dB:IC=\\E[%d@:\\\n\t:LE=\\E[%dD:\\\n\t:RI=\\E[%dC:UP=\\E[%dA:ae=^O:al=\\E[L:as=^N:bl=^G:bt=\\E[Z:\\\n\t:cd=\\E[J:ce=\\E[K:cl=\\E[H\\E[2J:cm=\\E[%i%d;%dH:cr=^M:\\\n\t:cs=\\E[%i%d;%dr:ct=\\E[3g:dc=\\E[P:dl=\\E[M:do=^J:ec=\\E[%dX:\\\n\t:ei=\\E[4l:ho=\\E[H:im=\\E[4h:is=\\E[!p\\E[?3;4l\\E[4l\\E>:\\\n\t:kD=\\177:\\\n\t:kb=^H:ke=\\E[?1l\\E>:\\\n\t:ks=\\E[?1h\\E=:le=^H:mb=\\E[5m:md=\\E[1m:\\\n\t:me=\\E[m\\017:mr=\\E[7m:nd=\\E[C:rc=\\E8:sc=\\E7:se=\\E[27m:\\\n\t:sf=^J:so=\\E[7m:sr=\\EM:st=\\EH:ta=^I:te=\\E[?1047l\\E[?1048l:\\\n\t:ti=\\E[?1048h\\E[?1047h:ue=\\E[24m:up=\\E[A:us=\\E[4m:\\\n\t:vb=\\E[?5h\\E[?5l:ve=\\E[?25h:vi=\\E[?25l:vs=\\E[?25h:\\\n\t:ui=\\E[N:ai=\\E[O:bk=\\E[U:fw=\\E[V:\n# xterm-redhat is identical to xterm-xfree86 with the addition of a small\n# VT220-ism regarding the backspace and delete keys; this is mandated by\n# the keyboard configuration section of the Debian Policy Manual.\nxterm-redhat|Red Hat xterm (backspace and delete changed):\\\n\t:kD=\\E[3~:kb=\\177:tc=xterm-xfree86:\n# This is the only entry which you should have to customize, since \"xterm\"\n# is widely used for a variety of incompatible terminal emulations including\n# color_xterm and rxvt.\nxterm|X11 terminal emulator:\\\n\t:tc=xterm-redhat:\n");
 
   termcap = g_slice_new (VteTermcap);
   termcap->start = contents;
   termcap->tree = _vte_termcap_parse_file (contents, length);
-  termcap->end = contents + 1602;
+  termcap->end = contents + 1618;
 
   return termcap;
 }
@@ -380,7 +380,7 @@ static void
 _vte_termcap_destroy (VteTermcap *termcap)
 {
   g_tree_destroy (termcap->tree);
-  g_slice_free1 (1602, (gpointer) termcap->start);
+  g_slice_free1 (1618, (gpointer) termcap->start);
   g_slice_free (VteTermcap, termcap);
 }
 
