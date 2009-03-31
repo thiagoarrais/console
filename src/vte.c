@@ -4434,9 +4434,8 @@ vte_terminal_command_history_forward(VteTerminal *terminal)
 {
 	if (!terminal->pvt->cmd_history) return;
 	VteCommandHistoryNode *history = terminal->pvt->cmd_history->next;
-	if (!history) return;
 	terminal->pvt->cmd_history = history;
-	vte_terminal_user_input(terminal, history->data);
+	if (history) vte_terminal_user_input(terminal, history->data);
 }
 
 /* Handle the toplevel being reconfigured. */
