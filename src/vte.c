@@ -4237,29 +4237,29 @@ vte_terminal_feed_child_using_modes(VteTerminal *terminal,
 static void
 vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
 {
-  glong i;
-  InputNode *current_node, *last_node;
-  VteTerminalPrivate *pvt = terminal->pvt;
+	glong i;
+	InputNode *current_node, *last_node;
+	VteTerminalPrivate *pvt = terminal->pvt;
 
-  if (!pvt->user_input_mode) return;
+	if (!pvt->user_input_mode) return;
 
-  last_node = pvt->input_cursor;
-  for(i = 0; i < length; ++i) {
-    InputNode *deleted_node = last_node->next;
-    current_node = g_slice_new0(InputNode);
-    current_node->charData = text[i];
-    current_node->previous = last_node;
-    last_node->next = current_node;
-    if (deleted_node) {
-      current_node->next = deleted_node->next;
-      --terminal->pvt->input_length;
-      g_slice_free(InputNode, deleted_node);
-    }
-    last_node = current_node;
-  }
+	last_node = pvt->input_cursor;
+  	for(i = 0; i < length; ++i) {
+		InputNode *deleted_node = last_node->next;
+		current_node = g_slice_new0(InputNode);
+		current_node->charData = text[i];
+		current_node->previous = last_node;
+		last_node->next = current_node;
+		if (deleted_node) {
+			current_node->next = deleted_node->next;
+			--terminal->pvt->input_length;
+			g_slice_free(InputNode, deleted_node);
+		}
+		last_node = current_node;
+	}
 
-  terminal->pvt->input_cursor = last_node;
-  terminal->pvt->input_length += length;
+	terminal->pvt->input_cursor = last_node;
+	terminal->pvt->input_length += length;
 }
 
 void vte_terminal_reset_pending_input(VteTerminal *terminal)
@@ -4283,23 +4283,23 @@ void vte_terminal_reset_pending_input(VteTerminal *terminal)
 void
 vte_terminal_flush_pending_input(VteTerminal *terminal)
 {
-  glong i;
-  gchar *input_line;
-  InputNode *current_node;
-  VteCommandHistoryNode *cmd;
-  VteTerminalPrivate *pvt = terminal->pvt;
+	glong i;
+	gchar *input_line;
+	InputNode *current_node;
+	VteCommandHistoryNode *cmd;
+	VteTerminalPrivate *pvt = terminal->pvt;
 
-  if (!pvt->user_input_mode) return;
+	if (!pvt->user_input_mode) return;
 
-  input_line = (gchar*) g_slice_alloc((pvt->input_length + 1) * sizeof(gchar));
+	input_line = (gchar*) g_slice_alloc((pvt->input_length + 1) * sizeof(gchar));
 
-  current_node = pvt->input_head->next;
-  i = 0;
-  while(current_node) {
-    input_line[i++] = current_node->charData;
-    current_node = current_node->next;
-  }
-  input_line[i] = '\0';
+	current_node = pvt->input_head->next;
+	i = 0;
+	while(current_node) {
+		input_line[i++] = current_node->charData;
+		current_node = current_node->next;
+	}
+	input_line[i] = '\0';
 
 	cmd = g_slice_new0(VteCommandHistoryNode);
 	if (pvt->last_cmd) {
@@ -4311,8 +4311,8 @@ vte_terminal_flush_pending_input(VteTerminal *terminal)
 	cmd->data = input_line;
 	pvt->last_cmd = cmd;
 
-  vte_terminal_emit_line_received(terminal, input_line, pvt->input_length);
-  vte_terminal_reset_pending_input(terminal);
+	vte_terminal_emit_line_received(terminal, input_line, pvt->input_length);
+	vte_terminal_reset_pending_input(terminal);
 }
 
 void vte_terminal_cursor_left(VteTerminal *terminal) {
