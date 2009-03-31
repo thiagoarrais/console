@@ -397,6 +397,8 @@ _vte_terminal_clear_current_line (VteTerminal *terminal)
 
 	/* We've modified the display.  Make a note of it. */
 	terminal->pvt->text_deleted_flag = TRUE;
+
+	vte_terminal_reset_pending_input(terminal);
 }
 
 /* Clear above the current line. */

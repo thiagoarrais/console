@@ -221,6 +221,8 @@ void vte_terminal_stop_user_input(VteTerminal *terminal);
 void vte_terminal_command_history_back(VteTerminal *terminal);
 void vte_terminal_command_history_forward(VteTerminal *terminal);
 
+void vte_terminal_reset_pending_input(VteTerminal *terminal);
+
 /* Send data to the terminal to display, or to the terminal's forked command
  * to handle in some way.  If it's 'cat', they should be the same. */
 void vte_terminal_feed(VteTerminal *terminal, const char *data, glong length);
