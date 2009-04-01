@@ -4352,23 +4352,23 @@ vte_terminal_user_input(VteTerminal *terminal, gchar *text)
 	glong bksplen, avlen, tmplen, suflen = 0;
 
 	VteTerminalPrivate *pvt = terminal->pvt;
-	InputNode *current_node = pvt->input_cursor->next;
-	if (current_node) {
+	InputNode *cursor = pvt->input_cursor->next;
+	if (cursor) {
 		avlen = pvt->input_length + 1;
 		suffix = (gchar*) g_slice_alloc(avlen * sizeof(gchar));
-		while(current_node) {
-			suffix[suflen++] = current_node->charData;
-			current_node = current_node->next;
+		while(cursor) {
+			suffix[suflen++] = cursor->charData;
+			cursor = cursor->next;
 		}
 		suffix[suflen] = '\0';
 
-		bksplen = 5;
+		bksplen = 11;
 		tmplen = suflen;
 		while((tmplen = tmplen / 10) > 0) bksplen++;
 
 		backspace = (gchar*) g_slice_alloc(bksplen * sizeof(gchar));
 
-		g_sprintf(backspace, "\033[%dD", suflen);
+		g_sprintf(backspace, "\033[O\033[%dD\033[N", suflen);
 		if (suflen + bksplen > avlen) {
 			suffix_cmd = (gchar*) g_slice_alloc((suflen + bksplen) * sizeof(gchar));
 			g_stpcpy(suffix_cmd, suffix);
