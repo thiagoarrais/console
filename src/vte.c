@@ -4251,9 +4251,7 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
 		current_node->previous = last_node;
 		last_node->next = current_node;
 		if (deleted_node) {
-			current_node->next = deleted_node->next;
-			--terminal->pvt->input_length;
-			g_slice_free(InputNode, deleted_node);
+			current_node->next = deleted_node;
 		}
 		last_node = current_node;
 	}
@@ -4349,10 +4347,45 @@ void vte_terminal_delete_current_char(VteTerminal *terminal)
 static void
 vte_terminal_user_input(VteTerminal *terminal, gchar *text)
 {
-  const int length = strlen(text);
+	gchar *suffix, *suffix_cmd, *backspace;
+	const int length = strlen(text);
+	glong bksplen, avlen, tmplen, suflen = 0;
 
-  vte_terminal_store_input(terminal, text, length);
-  vte_terminal_feed(terminal, text, length);
+	VteTerminalPrivate *pvt = terminal->pvt;
+	InputNode *current_node = pvt->input_cursor->next;
+	if (current_node) {
+		avlen = pvt->input_length + 1;
+		suffix = (gchar*) g_slice_alloc(avlen * sizeof(gchar));
+		while(current_node) {
+			suffix[suflen++] = current_node->charData;
+			current_node = current_node->next;
+		}
+		suffix[suflen] = '\0';
+
+		bksplen = 5;
+		tmplen = suflen;
+		while((tmplen = tmplen / 10) > 0) bksplen++;
+
+		backspace = (gchar*) g_slice_alloc(bksplen * sizeof(gchar));
+
+		g_sprintf(backspace, "\033[%dD", suflen);
+		if (suflen + bksplen > avlen) {
+			suffix_cmd = (gchar*) g_slice_alloc((suflen + bksplen) * sizeof(gchar));
+			g_stpcpy(suffix_cmd, suffix);
+		} else {
+			suffix_cmd = suffix;
+		}
+		g_stpcpy(suffix_cmd + suflen, backspace);
+	}
+
+	vte_terminal_store_input(terminal, text, length);
+	vte_terminal_feed(terminal, text, length);
+	if (suflen) {
+		vte_terminal_feed(terminal, suffix_cmd, suflen + bksplen);
+		if (suffix_cmd != suffix) g_slice_free1((suflen + bksplen) * sizeof(gchar), suffix_cmd);
+		g_slice_free1(avlen * sizeof(gchar), suffix);
+		g_slice_free1(bksplen * sizeof(gchar), backspace);
+	}
 }
 
 
