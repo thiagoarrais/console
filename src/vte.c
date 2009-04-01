@@ -4245,13 +4245,14 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
 
 	last_node = pvt->input_cursor;
   	for(i = 0; i < length; ++i) {
-		InputNode *deleted_node = last_node->next;
+		InputNode *next_node = last_node->next;
 		current_node = g_slice_new0(InputNode);
 		current_node->charData = text[i];
 		current_node->previous = last_node;
 		last_node->next = current_node;
-		if (deleted_node) {
-			current_node->next = deleted_node;
+		if (next_node) {
+			current_node->next = next_node;
+			next_node->previous = current_node;
 		}
 		last_node = current_node;
 	}
