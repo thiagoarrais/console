@@ -1858,8 +1858,12 @@ vte_sequence_handler_nd (VteTerminal *terminal, GValueArray *params)
 	if ((screen->cursor_current.col + 1) < terminal->column_count) {
 		/* There's room to move right. */
 		screen->cursor_current.col++;
-    vte_terminal_cursor_right(terminal);
+	} else {
+		/* Wrap to the next line */
+		screen->cursor_current.col = 0;
+		screen->cursor_current.row++;
 	}
+	vte_terminal_cursor_right(terminal);
 }
 
 /* Move the cursor to the beginning of the next line, scrolling if necessary. */
