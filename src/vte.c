@@ -3208,13 +3208,11 @@ _vte_terminal_insert_char(VteTerminal *terminal, gunichar c,
 	/* If we're autowrapping *here*, do it. */
 	screen->cursor_current.col = col;
 	if (G_UNLIKELY (col >= terminal->column_count)) {
-		if (!terminal->pvt->flags.xn) {
-			/* Wrap. */
-			screen->cursor_current.col = 0;
-			/* Mark this line as soft-wrapped. */
-			row->soft_wrapped = 1;
-			_vte_terminal_cursor_down (terminal);
-		}
+		/* Wrap. */
+		screen->cursor_current.col = 0;
+		/* Mark this line as soft-wrapped. */
+		row->soft_wrapped = 1;
+		_vte_terminal_cursor_down (terminal);
 	}
 
 	/* We added text, so make a note of it. */
@@ -7499,11 +7497,6 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 	terminal->pvt->matcher = _vte_matcher_new(emulation);
 
 	if (terminal->pvt->termcap != NULL) {
-		/* Read emulation flags. */
-		terminal->pvt->flags.xn = _vte_termcap_find_boolean(terminal->pvt->termcap,
-								    terminal->pvt->emulation,
-								    "xn");
-
 		/* Resize to the given default. */
 		columns = _vte_termcap_find_numeric(terminal->pvt->termcap,
 						    terminal->pvt->emulation,
