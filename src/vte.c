@@ -3181,19 +3181,6 @@ _vte_terminal_insert_char(VteTerminal *terminal, gunichar c,
 	attr = screen->defaults.attr;
 	attr.columns = columns;
 
-	if (G_UNLIKELY (c == '_' && terminal->pvt->flags.ul)) {
-		struct vte_charcell *pcell =
-			&g_array_index (row->cells, struct vte_charcell, col);
-		/* Handle overstrike-style underlining. */
-		if (pcell->c != 0) {
-			/* restore previous contents */
-			c = pcell->c;
-			attr.columns = pcell->attr.columns;
-			attr.fragment = pcell->attr.fragment;
-
-			attr.underline = 1;
-		}
-	}
 	g_array_index(row->cells, struct vte_charcell, col).c = c;
 	g_array_index(row->cells, struct vte_charcell, col).attr = attr;
 	col++;
@@ -7513,9 +7500,6 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 
 	if (terminal->pvt->termcap != NULL) {
 		/* Read emulation flags. */
-		terminal->pvt->flags.ul = _vte_termcap_find_boolean(terminal->pvt->termcap,
-								    terminal->pvt->emulation,
-								    "ul");
 		terminal->pvt->flags.xn = _vte_termcap_find_boolean(terminal->pvt->termcap,
 								    terminal->pvt->emulation,
 								    "xn");
