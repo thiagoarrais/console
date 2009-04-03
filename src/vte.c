@@ -1147,19 +1147,12 @@ _vte_terminal_set_tabstop(VteTerminal *terminal, int column)
 static void
 vte_terminal_set_default_tabstops(VteTerminal *terminal)
 {
-	int i, width = 0;
+	int i, width = VTE_TAB_WIDTH;
 	if (terminal->pvt->tabstops != NULL) {
 		g_hash_table_destroy(terminal->pvt->tabstops);
 	}
 	terminal->pvt->tabstops = g_hash_table_new(NULL, NULL);
-	if (terminal->pvt->termcap != NULL) {
-		width = _vte_termcap_find_numeric(terminal->pvt->termcap,
-						  terminal->pvt->emulation,
-						  "it");
-	}
-	if (width == 0) {
-		width = VTE_TAB_WIDTH;
-	}
+
 	for (i = 0; i <= VTE_TAB_MAX; i += width) {
 		_vte_terminal_set_tabstop(terminal, i);
 	}
