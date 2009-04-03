@@ -7513,9 +7513,6 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 
 	if (terminal->pvt->termcap != NULL) {
 		/* Read emulation flags. */
-		terminal->pvt->flags.LP = _vte_termcap_find_boolean(terminal->pvt->termcap,
-								    terminal->pvt->emulation,
-								    "LP");
 		terminal->pvt->flags.ul = _vte_termcap_find_boolean(terminal->pvt->termcap,
 								    terminal->pvt->emulation,
 								    "ul");

@@ -203,8 +203,6 @@ struct _VteTerminalPrivate {
 	struct _vte_matcher *matcher;	/* control sequence matcher */
 	const char *emulation;		/* terminal type to emulate */
 	struct vte_terminal_flags {	/* boolean termcap flags */
-		gboolean bw;
-		gboolean LP;
 		gboolean ul;
 		gboolean xn;
 	} flags;
