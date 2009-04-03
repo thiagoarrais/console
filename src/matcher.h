@@ -23,7 +23,6 @@
 
 
 #include <glib-object.h>
-#include "vtetc.h"
 
 G_BEGIN_DECLS
 

@@ -81,8 +81,6 @@ libvte_la_SOURCES = \
 	vteseq-list.h \
 	vteskel.c \
 	vteskel.h \
-	vtetc.c \
-	vtetc.h \
 	vtetree.c \
 	vtetree.h \
 	vtetypebuiltins.c \
@@ -171,7 +169,7 @@ EXTRA_DIST += $(pkglib_SCRIPTS)
 TEST_SH = check-doc-syntax.sh
 EXTRA_DIST += $(TEST_SH)
 
-check_PROGRAMS = buffer dumpkeys iso2022 reflect-text-view reflect-vte ring mev ssfe table trie xticker vteconv vtetc
+check_PROGRAMS = buffer dumpkeys iso2022 reflect-text-view reflect-vte ring mev ssfe table trie xticker vteconv
 TESTS = buffer ring table trie $(TEST_SH)
 
 AM_CFLAGS = $(GLIB_CFLAGS) $(GOBJECT_CFLAGS)
@@ -204,8 +202,6 @@ iso2022_SOURCES = \
 	trie.h \
 	vteconv.c \
 	vteconv.h \
-	vtetc.c \
-	vtetc.h \
 	vtetree.c \
 	vtetree.h
 iso2022_CPPFLAGS = -DISO2022_MAIN
@@ -230,8 +226,6 @@ table_SOURCES = \
 	trie.h \
 	vteconv.c \
 	vteconv.h \
-	vtetc.c \
-	vtetc.h
 table_CPPFLAGS = -DTABLE_MAIN
 table_CFLAGS = $(VTE_CFLAGS)
 table_LDADD = $(LIBS) $(VTE_LIBS)
@@ -250,15 +244,10 @@ trie_SOURCES = \
 	table.c \
 	table.h \
 	vteconv.c \
-	vteconv.h \
-	vtetc.c \
-	vtetc.h 
+	vteconv.h
 trie_CPPFLAGS = -DTRIE_MAIN
 trie_CFLAGS = $(VTE_CFLAGS)
 trie_LDADD = $(LIBS) $(VTE_LIBS)
-
-vtetc_SOURCES = vtetc.c vtetc.h debug.c debug.h
-vtetc_CPPFLAGS = -DTERMCAP_MAIN
 
 vterdb_CFLAGS = $(GTK_CFLAGS) $(X_CFLAGS) -DVTERDB_MAIN
 vterdb_SOURCES = vterdb.c

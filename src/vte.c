@@ -46,7 +46,6 @@
 #include "vteaccess.h"
 #include "vteint.h"
 #include "vteregex.h"
-#include "vtetc.h"
 
 #ifdef HAVE_LOCALE_H
 #include <locale.h>
@@ -68,7 +67,6 @@ typedef gunichar wint_t;
 #endif
 
 static void vte_terminal_set_visibility (VteTerminal *terminal, GdkVisibilityState state);
-static void vte_terminal_load_termcap(VteTerminal *terminal, gboolean reset);
 static void vte_terminal_paste(VteTerminal *terminal, GdkAtom board);
 static void vte_terminal_real_copy_clipboard(VteTerminal *terminal);
 static void vte_terminal_real_paste_clipboard(VteTerminal *terminal);
@@ -7480,8 +7478,6 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 	terminal->pvt->emulation = g_intern_string(emulation);
 	_vte_debug_print(VTE_DEBUG_MISC,
 			"Setting emulation to `%s'...\n", emulation);
-	/* Load the (static) termcap info. */
-	vte_terminal_load_termcap(terminal, FALSE);
 
 	/* Create a table to hold the control sequences. */
 	if (terminal->pvt->matcher != NULL) {
@@ -7545,29 +7541,6 @@ _vte_terminal_inline_error_message(VteTerminal *terminal, const char *format, ..
 	vte_terminal_feed (terminal, str, -1);
 	vte_terminal_feed (terminal, "\r\n", 2);
 	g_free (str);
-}
-
-static void
-vte_terminal_load_termcap(VteTerminal *terminal, gboolean reset)
-{
-        GObject *object = G_OBJECT(terminal);
-
-        g_object_freeze_notify(object);
-
-	if (terminal->pvt->termcap != NULL) {
-		_vte_termcap_free(terminal->pvt->termcap);
-	}
-	terminal->pvt->termcap = _vte_termcap_new();
-	_vte_debug_print(VTE_DEBUG_MISC, "\n");
-	if (terminal->pvt->termcap == NULL) {
-		_vte_terminal_inline_error_message(terminal,
-				"Failed to load terminal capabilities");
-	}
-	if (reset) {
-		vte_terminal_set_emulation(terminal, terminal->pvt->emulation);
-	}
-
-        g_object_thaw_notify(object);
 }
 
 static void
@@ -8182,9 +8155,6 @@ vte_terminal_finalize(GObject *object)
 	/* Clean up emulation structures. */
 	if (terminal->pvt->matcher != NULL) {
 		_vte_matcher_free(terminal->pvt->matcher);
-	}
-	if (terminal->pvt->termcap != NULL) {
-		_vte_termcap_free(terminal->pvt->termcap);
 	}
 
 	remove_update_timeout (terminal);

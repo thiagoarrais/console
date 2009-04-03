@@ -26,7 +26,6 @@
 #include "caps.h"
 #include "debug.h"
 #include "keymap.h"
-#include "vtetc.h"
 
 #ifdef VTE_DEBUG
 static const char *

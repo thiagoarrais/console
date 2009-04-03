@@ -23,7 +23,6 @@
 
 #include <glib.h>
 #include <gdk/gdk.h>
-#include "vtetc.h"
 
 G_BEGIN_DECLS
 
