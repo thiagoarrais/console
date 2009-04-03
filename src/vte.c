@@ -7509,7 +7509,7 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 	if (terminal->pvt->matcher != NULL) {
 		_vte_matcher_free(terminal->pvt->matcher);
 	}
-	terminal->pvt->matcher = _vte_matcher_new(emulation, terminal->pvt->termcap);
+	terminal->pvt->matcher = _vte_matcher_new(emulation);
 
 	if (terminal->pvt->termcap != NULL) {
 		/* Read emulation flags. */

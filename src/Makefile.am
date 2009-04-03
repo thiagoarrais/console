@@ -164,7 +164,7 @@ vte_LDADD = libvte.la $(LIBS) $(VTE_LIBS) $(X_LIBS)
 
 # Misc unit tests and utilities
 
-pkglib_PROGRAMS = interpret vterdb
+pkglib_PROGRAMS = vterdb
 pkglib_SCRIPTS = decset osc window
 EXTRA_DIST += $(pkglib_SCRIPTS)
 
@@ -186,34 +186,6 @@ reflect_vte_CPPFLAGS = -DUSE_VTE
 reflect_vte_CFLAGS = $(VTE_CFLAGS) $(X_CFLAGS)
 reflect_vte_SOURCES = reflect.c
 reflect_vte_LDADD = libvte.la $(LIBS) $(VTE_LIBS) $(X_LIBS)
-
-interpret_SOURCES = \
-	buffer.c \
-	buffer.h \
-	caps.c \
-	caps.h \
-	debug.c \
-	debug.h \
-	iso2022.c \
-	iso2022.h \
-	matcher.c \
-	matcher.h \
-	table.c \
-	table.h \
-	trie.c \
-	trie.h \
-	vteconv.c \
-	vteconv.h \
-	vtetc.c \
-	vtetc.h \
-	vtetree.c \
-	vtetree.h \
-	interpret.c
-interpret_CPPFLAGS = \
- 	-DINTERPRET_MAIN \
- 	-DDATADIR='"$(datadir)"'
-interpret_CFLAGS = $(GTK_CFLAGS)
-interpret_LDADD = $(GTK_LIBS)
 
 iso2022_SOURCES = \
 	buffer.c \

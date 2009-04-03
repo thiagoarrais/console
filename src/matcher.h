@@ -53,8 +53,7 @@ struct _vte_matcher_class{
 };
 
 /* Create and init matcher. */
-struct _vte_matcher *_vte_matcher_new(const char *emulation,
-				      struct _vte_termcap *termcap);
+struct _vte_matcher *_vte_matcher_new(const char *emulation);
 
 /* Free a matcher. */
 void _vte_matcher_free(struct _vte_matcher *matcher);

@@ -53,48 +53,13 @@ _vte_matcher_add(const struct _vte_matcher *matcher,
 
 /* Loads all sequences into matcher */
 static void
-_vte_matcher_init(struct _vte_matcher *matcher, const char *emulation,
-		  struct _vte_termcap *termcap)
+_vte_matcher_init(struct _vte_matcher *matcher, const char *emulation)
 {
 	const char *code, *value;
 	gboolean found_cr = FALSE, found_lf = FALSE;
-	gssize stripped_length;
-	char *stripped;
 	int i;
 
 	_vte_debug_print(VTE_DEBUG_LIFECYCLE, "_vte_matcher_init()\n");
-
-	if (termcap != NULL) {
-		/* Load the known capability strings from the termcap
-		 * structure into the table for recognition. */
-		for (i = 0;
-				_vte_terminal_capability_strings[i].capability[0];
-				i++) {
-			if (_vte_terminal_capability_strings[i].key) {
-				continue;
-			}
-			code = _vte_terminal_capability_strings[i].capability;
-			stripped = _vte_termcap_find_string_length(termcap,
-					emulation,
-					code,
-					&stripped_length);
-			if (stripped[0] != '\0') {
-				_vte_matcher_add(matcher,
-						stripped, stripped_length,
-						code, 0);
-				if (stripped[0] == '\r') {
-					found_cr = TRUE;
-				} else
-					if (stripped[0] == '\n') {
-						if (strcmp(code, "sf") == 0 ||
-								strcmp(code, "do") == 0) {
-							found_lf = TRUE;
-						}
-					}
-			}
-			g_free(stripped);
-		}
-	}
 
 	/* Add emulator-specific sequences. */
 	if (strstr(emulation, "xterm") || strstr(emulation, "dtterm")) {
@@ -164,7 +129,7 @@ _vte_matcher_destroy(gpointer value)
 
 /* Create and init matcher. */
 struct _vte_matcher *
-_vte_matcher_new(const char *emulation, struct _vte_termcap *termcap)
+_vte_matcher_new(const char *emulation)
 {
 	struct _vte_matcher *ret = NULL;
 	g_static_mutex_lock(&_vte_matcher_mutex);
@@ -185,7 +150,7 @@ _vte_matcher_new(const char *emulation, struct _vte_termcap *termcap)
 	if (ret->match == NULL) {
 		ret->impl = ret->impl->klass->create();
 		ret->match = ret->impl->klass->match;
-		_vte_matcher_init(ret, emulation, termcap);
+		_vte_matcher_init(ret, emulation);
 	}
 
 	g_static_mutex_unlock(&_vte_matcher_mutex);
