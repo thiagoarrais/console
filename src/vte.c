@@ -7496,24 +7496,8 @@ vte_terminal_set_emulation(VteTerminal *terminal, const char *emulation)
 	}
 	terminal->pvt->matcher = _vte_matcher_new(emulation);
 
-	if (terminal->pvt->termcap != NULL) {
-		/* Resize to the given default. */
-		columns = _vte_termcap_find_numeric(terminal->pvt->termcap,
-						    terminal->pvt->emulation,
-						    "co");
-		if (columns <= 0) {
-			columns = VTE_COLUMNS;
-		}
-		terminal->pvt->default_column_count = columns;
-
-		rows = _vte_termcap_find_numeric(terminal->pvt->termcap,
-						 terminal->pvt->emulation,
-						 "li");
-		if (rows <= 0 ) {
-			rows = VTE_ROWS;
-		}
-		terminal->pvt->default_row_count = rows;
-	}
+	terminal->pvt->default_column_count = VTE_COLUMNS;
+	terminal->pvt->default_row_count = VTE_ROWS;
 
 	/* Notify observers that we changed our emulation. */
 	vte_terminal_emit_emulation_changed(terminal);
