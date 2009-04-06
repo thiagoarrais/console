@@ -1476,7 +1476,7 @@ vte_sequence_handler_dc (VteTerminal *terminal, GValueArray *params)
 		}
 	}
 
-  vte_terminal_delete_current_char(terminal);
+	vte_terminal_delete_current_char(terminal);
 
 	/* We've modified the display.  Make a note of it. */
 	terminal->pvt->text_deleted_flag = TRUE;
