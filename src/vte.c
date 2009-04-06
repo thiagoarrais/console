@@ -4358,6 +4358,9 @@ void vte_terminal_delete_current_char(VteTerminal *terminal)
       			deleted_node->previous->next = deleted_node->next;
 		if (deleted_node->next)
 			deleted_node->next->previous = deleted_node->previous;
+
+		vte_terminal_feed(terminal, "\033[0J", 4);
+		vte_terminal_reprint_suffix(terminal);
 	}
 
 	g_slice_free(InputNode, deleted_node);
