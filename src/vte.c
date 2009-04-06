@@ -4304,32 +4304,15 @@ void vte_terminal_cursor_right(VteTerminal *terminal) {
   else vte_terminal_store_input(terminal, " ", 1);
 }
 
-void vte_terminal_delete_current_char(VteTerminal *terminal)
-{
-	InputNode *deleted_node = terminal->pvt->input_cursor->next;
-
-	if (!terminal->pvt->user_input_mode) return;
-
-	if (deleted_node) {
-		--terminal->pvt->input_length;
-		if (deleted_node->previous)
-      			deleted_node->previous->next = deleted_node->next;
-		if (deleted_node->next)
-			deleted_node->next->previous = deleted_node->previous;
-	}
-
-	g_slice_free(InputNode, deleted_node);
-}
-
 static void
-vte_terminal_user_input(VteTerminal *terminal, gchar *text)
+vte_terminal_reprint_suffix(VteTerminal *terminal)
 {
 	gchar *suffix, *suffix_cmd, *backspace;
-	const int length = strlen(text);
-	glong bksplen, avlen, tmplen, suflen = 0;
 
+	glong bksplen, avlen, tmplen, suflen = 0;
 	VteTerminalPrivate *pvt = terminal->pvt;
 	InputNode *cursor = pvt->input_cursor->next;
+
 	if (cursor) {
 		avlen = pvt->input_length + 1;
 		suffix = (gchar*) g_slice_alloc(avlen * sizeof(gchar));
@@ -4355,14 +4338,39 @@ vte_terminal_user_input(VteTerminal *terminal, gchar *text)
 		g_stpcpy(suffix_cmd + suflen, backspace);
 	}
 
-	vte_terminal_store_input(terminal, text, length);
-	vte_terminal_feed(terminal, text, length);
 	if (suflen) {
 		vte_terminal_feed(terminal, suffix_cmd, suflen + bksplen);
 		if (suffix_cmd != suffix) g_slice_free1((suflen + bksplen) * sizeof(gchar), suffix_cmd);
 		g_slice_free1(avlen * sizeof(gchar), suffix);
 		g_slice_free1(bksplen * sizeof(gchar), backspace);
 	}
+}
+
+void vte_terminal_delete_current_char(VteTerminal *terminal)
+{
+	InputNode *deleted_node = terminal->pvt->input_cursor->next;
+
+	if (!terminal->pvt->user_input_mode) return;
+
+	if (deleted_node) {
+		--terminal->pvt->input_length;
+		if (deleted_node->previous)
+      			deleted_node->previous->next = deleted_node->next;
+		if (deleted_node->next)
+			deleted_node->next->previous = deleted_node->previous;
+	}
+
+	g_slice_free(InputNode, deleted_node);
+}
+
+static void
+vte_terminal_user_input(VteTerminal *terminal, gchar *text)
+{
+	const int length = strlen(text);
+
+	vte_terminal_feed(terminal, text, length);
+	vte_terminal_reprint_suffix(terminal);
+	vte_terminal_store_input(terminal, text, length);
 }
 
 
