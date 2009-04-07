@@ -4442,12 +4442,12 @@ void
 vte_terminal_command_history_back(VteTerminal *terminal)
 {
 	VteCommandHistoryNode *history = terminal->pvt->cmd_history;
-	if (!history) {
+	if (!history)
 		terminal->pvt->cmd_history = history = terminal->pvt->last_cmd;
-	} else {
+	else
 		terminal->pvt->cmd_history = history = history->previous;
-	}
-	vte_terminal_user_input(terminal, history->data);
+
+	if (history) vte_terminal_user_input(terminal, history->data);
 }
 
 void
