@@ -4646,6 +4646,8 @@ vte_terminal_cursor_end(VteTerminal *terminal)
 	gchar *cmdstr;
 	glong cmdlen, num_backsteps = terminal->pvt->input_length - terminal->pvt->input_cursor_position;
 
+	if (0 == num_backsteps) return;
+
 	cmdlen = slice_sprintnum(&cmdstr, "\033[%dC", num_backsteps);
 	vte_terminal_feed(terminal, cmdstr, cmdlen);
 
