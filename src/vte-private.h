@@ -432,6 +432,7 @@ struct _VteTerminalPrivate {
 	InputNode *input_cursor;
 	InputNode *input_head;
 	glong input_length;
+	glong input_cursor_position;
 
 	/* Command history */
 	VteCommandHistoryNode *cmd_history;

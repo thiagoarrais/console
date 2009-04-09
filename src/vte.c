@@ -4235,6 +4235,7 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
 
 	terminal->pvt->input_cursor = last_node;
 	terminal->pvt->input_length += length;
+	terminal->pvt->input_cursor_position += length;
 }
 
 void vte_terminal_reset_pending_input(VteTerminal *terminal)
@@ -4252,7 +4253,7 @@ void vte_terminal_reset_pending_input(VteTerminal *terminal)
 	head_node->charData = '\0';
 
 	terminal->pvt->input_head = terminal->pvt->input_cursor = head_node;
-	terminal->pvt->input_length = 0;
+	terminal->pvt->input_length = terminal->pvt->input_cursor_position = 0;
 }
 
 void
@@ -4291,17 +4292,21 @@ vte_terminal_flush_pending_input(VteTerminal *terminal)
 }
 
 void vte_terminal_cursor_left(VteTerminal *terminal) {
-  if (terminal->pvt->user_input_mode)
-    terminal->pvt->input_cursor = terminal->pvt->input_cursor->previous;
+	if (terminal->pvt->user_input_mode) {
+		terminal->pvt->input_cursor = terminal->pvt->input_cursor->previous;
+		if (terminal->pvt->input_cursor_position > 0) terminal->pvt->input_cursor_position--;
+	}
 }
 
 void vte_terminal_cursor_right(VteTerminal *terminal) {
-  InputNode *cursor = terminal->pvt->input_cursor;
+	InputNode *cursor = terminal->pvt->input_cursor;
 
-  if (!terminal->pvt->user_input_mode) return;
+	if (!terminal->pvt->user_input_mode) return;
 
-  if (cursor->next) terminal->pvt->input_cursor = cursor->next;
-  else vte_terminal_store_input(terminal, " ", 1);
+	if (cursor->next) terminal->pvt->input_cursor = cursor->next;
+	else vte_terminal_store_input(terminal, " ", 1);
+
+	terminal->pvt->input_cursor_position++;
 }
 
 static void
@@ -4615,6 +4620,37 @@ vte_terminal_read_modifiers (VteTerminal *terminal,
 	}
 }
 
+static void
+vte_terminal_cursor_home(VteTerminal *terminal)
+{
+	glong bksplen = 4;
+	glong tmplen = terminal->pvt->input_cursor_position;
+	while((tmplen = tmplen / 10) > 0) bksplen++;
+
+	gchar *backspace = (gchar*) g_slice_alloc(bksplen * sizeof(gchar));
+
+	g_sprintf(backspace, "\033[%dD", terminal->pvt->input_cursor_position);
+	vte_terminal_feed(terminal, backspace, bksplen);
+
+	g_slice_free1(bksplen * sizeof(gchar), backspace);
+}
+
+static void
+vte_terminal_cursor_end(VteTerminal *terminal)
+{
+	glong num_backsteps = terminal->pvt->input_length - terminal->pvt->input_cursor_position;
+	glong bksplen = 4;
+	glong tmplen = num_backsteps;
+	while((tmplen = tmplen / 10) > 0) bksplen++;
+
+	gchar *backspace = (gchar*) g_slice_alloc(bksplen * sizeof(gchar));
+
+	g_sprintf(backspace, "\033[%dC", num_backsteps);
+	vte_terminal_feed(terminal, backspace, bksplen);
+
+	g_slice_free1(bksplen * sizeof(gchar), backspace);
+}
+
 /* Read and handle a keypress event. */
 static gint
 vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
@@ -4827,6 +4863,8 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				vte_terminal_maybe_scroll_to_top(terminal);
 				scrolled = TRUE;
 				handled = TRUE;
+			} else {
+				vte_terminal_cursor_home(terminal);
 			}
 			break;
 		case GDK_KP_End:
@@ -4835,6 +4873,8 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				vte_terminal_maybe_scroll_to_bottom(terminal);
 				scrolled = TRUE;
 				handled = TRUE;
+			} else {
+				vte_terminal_cursor_end(terminal);
 			}
 			break;
 		/* Let Shift +/- tweak the font, like XTerm does. */
