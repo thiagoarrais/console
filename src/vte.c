@@ -4374,9 +4374,9 @@ void vte_terminal_delete_current_char(VteTerminal *terminal)
 
 		vte_terminal_feed(terminal, "\033[0J", 4);
 		vte_terminal_reprint_suffix(terminal);
-	}
 
-	g_slice_free(InputNode, deleted_node);
+		g_slice_free(InputNode, deleted_node);
+	}
 }
 
 static void
