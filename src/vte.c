@@ -4312,7 +4312,7 @@ void vte_terminal_cursor_right(VteTerminal *terminal) {
 static glong
 slice_sprintnum(gchar **output, const gchar *format, const glong number)
 {
-	glong outputlen = strlen(format + 1);
+	glong outputlen = strlen(format); //strlen - 1 (for the '%' sign) + 1 (for the null terminator)
 	glong tmplen = number;
 	while((tmplen = tmplen / 10) > 0) outputlen++;
 
