@@ -4309,12 +4309,26 @@ void vte_terminal_cursor_right(VteTerminal *terminal) {
 	terminal->pvt->input_cursor_position++;
 }
 
+static glong
+slice_sprintnum(gchar **output, const gchar *format, const glong number)
+{
+	glong outputlen = strlen(format + 1);
+	glong tmplen = number;
+	while((tmplen = tmplen / 10) > 0) outputlen++;
+
+	*output = (gchar*) g_slice_alloc(outputlen * sizeof(gchar));
+
+	g_sprintf(*output, format, number);
+
+	return outputlen;
+}
+
 static void
 vte_terminal_reprint_suffix(VteTerminal *terminal)
 {
 	gchar *suffix, *suffix_cmd, *backspace;
 
-	glong bksplen, avlen, tmplen, suflen = 0;
+	glong bksplen, avlen, suflen = 0;
 	VteTerminalPrivate *pvt = terminal->pvt;
 	InputNode *cursor = pvt->input_cursor->next;
 
@@ -4327,13 +4341,7 @@ vte_terminal_reprint_suffix(VteTerminal *terminal)
 		}
 		suffix[suflen] = '\0';
 
-		bksplen = 11;
-		tmplen = suflen;
-		while((tmplen = tmplen / 10) > 0) bksplen++;
-
-		backspace = (gchar*) g_slice_alloc(bksplen * sizeof(gchar));
-
-		g_sprintf(backspace, "\033[O\033[%dD\033[N", suflen);
+		bksplen = slice_sprintnum(&backspace, "\033[O\033[%dD\033[N", suflen);
 		if (suflen + bksplen > avlen) {
 			suffix_cmd = (gchar*) g_slice_alloc((suflen + bksplen) * sizeof(gchar));
 			g_stpcpy(suffix_cmd, suffix);
@@ -4623,32 +4631,25 @@ vte_terminal_read_modifiers (VteTerminal *terminal,
 static void
 vte_terminal_cursor_home(VteTerminal *terminal)
 {
-	glong bksplen = 4;
-	glong tmplen = terminal->pvt->input_cursor_position;
-	while((tmplen = tmplen / 10) > 0) bksplen++;
+	gchar *cmdstr;
+	glong cmdlen;
 
-	gchar *backspace = (gchar*) g_slice_alloc(bksplen * sizeof(gchar));
+	cmdlen = slice_sprintnum(&cmdstr, "\033[%dD", terminal->pvt->input_cursor_position);
+	vte_terminal_feed(terminal, cmdstr, cmdlen);
 
-	g_sprintf(backspace, "\033[%dD", terminal->pvt->input_cursor_position);
-	vte_terminal_feed(terminal, backspace, bksplen);
-
-	g_slice_free1(bksplen * sizeof(gchar), backspace);
+	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 }
 
 static void
 vte_terminal_cursor_end(VteTerminal *terminal)
 {
-	glong num_backsteps = terminal->pvt->input_length - terminal->pvt->input_cursor_position;
-	glong bksplen = 4;
-	glong tmplen = num_backsteps;
-	while((tmplen = tmplen / 10) > 0) bksplen++;
+	gchar *cmdstr;
+	glong cmdlen, num_backsteps = terminal->pvt->input_length - terminal->pvt->input_cursor_position;
 
-	gchar *backspace = (gchar*) g_slice_alloc(bksplen * sizeof(gchar));
+	cmdlen = slice_sprintnum(&cmdstr, "\033[%dC", num_backsteps);
+	vte_terminal_feed(terminal, cmdstr, cmdlen);
 
-	g_sprintf(backspace, "\033[%dC", num_backsteps);
-	vte_terminal_feed(terminal, backspace, bksplen);
-
-	g_slice_free1(bksplen * sizeof(gchar), backspace);
+	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 }
 
 /* Read and handle a keypress event. */
