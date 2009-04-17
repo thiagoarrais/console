@@ -4553,7 +4553,6 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				suppress_meta_esc = TRUE;
 			} else {
-				console_controller_clear_input(terminal);
 				vte_terminal_feed(terminal, "\033[U", 3);
 			}
 			handled = TRUE;
@@ -4566,8 +4565,7 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				suppress_meta_esc = TRUE;
 			} else {
-				console_controller_clear_input(terminal);
-        			vte_terminal_feed(terminal, "\033[V", 3);
+				vte_terminal_feed(terminal, "\033[V", 3);
 			}
 			handled = TRUE;
 			break;

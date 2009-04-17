@@ -229,6 +229,7 @@ void
 console_controller_command_history_back(VteTerminal *terminal)
 {
 	VteCommandHistoryNode *history = terminal->pvt->cmd_history;
+	console_controller_clear_input(terminal);
 	if (!history)
 		terminal->pvt->cmd_history = history = terminal->pvt->last_cmd;
 	else
@@ -240,6 +241,7 @@ console_controller_command_history_back(VteTerminal *terminal)
 void
 console_controller_command_history_forward(VteTerminal *terminal)
 {
+	console_controller_clear_input(terminal);
 	if (!terminal->pvt->cmd_history) return;
 	VteCommandHistoryNode *history = terminal->pvt->cmd_history->next;
 	terminal->pvt->cmd_history = history;
@@ -278,12 +280,16 @@ console_controller_clear_input(VteTerminal *terminal)
 	gchar *cmdstr;
 	glong cmdlen;
 
-	cmdlen = slice_sprintnum(&cmdstr, "\033[%dD", terminal->pvt->input_cursor_position);
+	if (terminal->pvt->input_cursor_position == 0) return;
+
+	cmdlen = slice_sprintnum(&cmdstr, "\033[O\033[%dD", terminal->pvt->input_cursor_position);
 	vte_terminal_feed(terminal, cmdstr, cmdlen);
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 
-	cmdlen = slice_sprintnum(&cmdstr, "\033[%dP\033[0J", terminal->pvt->input_cursor_position);
+	cmdlen = slice_sprintnum(&cmdstr, "\033[%dP\033[0J\033[N", terminal->pvt->input_cursor_position);
 	vte_terminal_feed(terminal, cmdstr, cmdlen);
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+
+	console_controller_reset_pending_input(terminal);
 }
 
