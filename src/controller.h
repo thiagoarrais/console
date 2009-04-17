@@ -26,7 +26,5 @@ void console_controller_delete_current_char(VteTerminal *terminal);
 
 void console_controller_cursor_home(VteTerminal *terminal);
 void console_controller_cursor_end(VteTerminal *terminal);
-void console_controller_clear_input(VteTerminal *terminal);
-
 
 #endif

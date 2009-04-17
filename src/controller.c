@@ -225,6 +225,25 @@ console_controller_user_input(VteTerminal *terminal, gchar *text)
 	console_controller_store_input(terminal, text, length);
 }
 
+static void
+console_controller_clear_input(VteTerminal *terminal)
+{
+	gchar *cmdstr;
+	glong cmdlen;
+
+	if (terminal->pvt->input_cursor_position == 0) return;
+
+	cmdlen = slice_sprintnum(&cmdstr, "\033[O\033[%dD", terminal->pvt->input_cursor_position);
+	vte_terminal_feed(terminal, cmdstr, cmdlen);
+	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+
+	cmdlen = slice_sprintnum(&cmdstr, "\033[%dP\033[0J\033[N", terminal->pvt->input_cursor_position);
+	vte_terminal_feed(terminal, cmdstr, cmdlen);
+	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+
+	console_controller_reset_pending_input(terminal);
+}
+
 void
 console_controller_command_history_back(VteTerminal *terminal)
 {
@@ -273,23 +292,3 @@ console_controller_cursor_end(VteTerminal *terminal)
 
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 }
-
-void
-console_controller_clear_input(VteTerminal *terminal)
-{
-	gchar *cmdstr;
-	glong cmdlen;
-
-	if (terminal->pvt->input_cursor_position == 0) return;
-
-	cmdlen = slice_sprintnum(&cmdstr, "\033[O\033[%dD", terminal->pvt->input_cursor_position);
-	vte_terminal_feed(terminal, cmdstr, cmdlen);
-	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
-
-	cmdlen = slice_sprintnum(&cmdstr, "\033[%dP\033[0J\033[N", terminal->pvt->input_cursor_position);
-	vte_terminal_feed(terminal, cmdstr, cmdlen);
-	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
-
-	console_controller_reset_pending_input(terminal);
-}
-
