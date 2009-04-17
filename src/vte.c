@@ -4654,6 +4654,21 @@ vte_terminal_cursor_end(VteTerminal *terminal)
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 }
 
+static void
+vte_terminal_clear_input(VteTerminal *terminal)
+{
+	gchar *cmdstr;
+	glong cmdlen;
+
+	cmdlen = slice_sprintnum(&cmdstr, "\033[%dD", terminal->pvt->input_cursor_position);
+	vte_terminal_feed(terminal, cmdstr, cmdlen);
+	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+
+	cmdlen = slice_sprintnum(&cmdstr, "\033[%dP\033[0J", terminal->pvt->input_cursor_position);
+	vte_terminal_feed(terminal, cmdstr, cmdlen);
+	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+}
+
 /* Read and handle a keypress event. */
 static gint
 vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
@@ -4816,7 +4831,8 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				suppress_meta_esc = TRUE;
 			} else {
-				vte_terminal_feed(terminal, "\033[2K\r\033[U", 8);
+				vte_terminal_clear_input(terminal);
+				vte_terminal_feed(terminal, "\033[U", 3);
 			}
 			handled = TRUE;
 			break;
@@ -4828,7 +4844,8 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				suppress_meta_esc = TRUE;
 			} else {
-        			vte_terminal_feed(terminal, "\033[2K\r\033[V", 8);
+				vte_terminal_clear_input(terminal);
+        			vte_terminal_feed(terminal, "\033[V", 3);
 			}
 			handled = TRUE;
 			break;
