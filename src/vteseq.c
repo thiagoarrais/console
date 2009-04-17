@@ -28,6 +28,7 @@
 
 #include "vte.h"
 #include "vte-private.h"
+#include "controller.h"
 
 #define BEL "\007"
 

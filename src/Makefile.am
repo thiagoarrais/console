@@ -33,6 +33,8 @@ libvte_la_SOURCES = \
 	buffer.h \
 	caps.c \
 	caps.h \
+	controller.c \
+	controller.h \
 	debug.c \
 	debug.h \
 	iso2022.c \

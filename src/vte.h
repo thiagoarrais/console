@@ -214,14 +214,6 @@ GtkWidget *vte_terminal_new(void);
  * not be interpreted as user input */
 void vte_terminal_begin_app_output(VteTerminal *terminal);
 void vte_terminal_finish_app_output(VteTerminal *terminal);
-void console_controller_start_user_input(VteTerminal *terminal);
-void console_controller_stop_user_input(VteTerminal *terminal);
-
-/* Mess with the command history buffer */
-void console_controller_command_history_back(VteTerminal *terminal);
-void console_controller_command_history_forward(VteTerminal *terminal);
-
-void console_controller_reset_pending_input(VteTerminal *terminal);
 
 /* Send data to the terminal to display, or to the terminal's forked command
  * to handle in some way.  If it's 'cat', they should be the same. */
@@ -402,16 +394,6 @@ const char *vte_terminal_get_status_line(VteTerminal *terminal);
 
 /* Get the padding the widget is using. */
 void vte_terminal_get_padding(VteTerminal *terminal, int *xpad, int *ypad);
-
-/* Flush any pending user input to listeners and reset */
-void console_controller_flush_pending_input(VteTerminal *terminal);
-
-/* Captures cursor movement inside pending input */
-void console_controller_cursor_left(VteTerminal *terminal);
-void console_controller_cursor_right(VteTerminal *terminal);
-
-/* Removes a single character from pending input */
-void console_controller_delete_current_char(VteTerminal *terminal);
 
 /* Attach an existing PTY master side to the terminal widget.  Use
  * instead of vte_terminal_fork_command(). */
