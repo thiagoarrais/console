@@ -3927,13 +3927,13 @@ vte_terminal_finish_app_output(VteTerminal *terminal)
 }
 
 void
-vte_terminal_stop_user_input(VteTerminal *terminal)
+console_controller_stop_user_input(VteTerminal *terminal)
 {
   terminal->pvt->user_input_mode = FALSE;
 }
 
 void
-vte_terminal_start_user_input(VteTerminal *terminal)
+console_controller_start_user_input(VteTerminal *terminal)
 {
   terminal->pvt->user_input_mode = TRUE;
 }
@@ -4211,7 +4211,7 @@ vte_terminal_feed_child_using_modes(VteTerminal *terminal,
 }
 
 static void
-vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
+console_controller_store_input(VteTerminal *terminal, gchar *text, glong length)
 {
 	glong i;
 	InputNode *current_node, *last_node;
@@ -4238,7 +4238,7 @@ vte_terminal_store_input(VteTerminal *terminal, gchar *text, glong length)
 	terminal->pvt->input_cursor_position += length;
 }
 
-void vte_terminal_reset_pending_input(VteTerminal *terminal)
+void console_controller_reset_pending_input(VteTerminal *terminal)
 {
 	InputNode *next_node, *current_node = terminal->pvt->input_head;
 	while(current_node) {
@@ -4257,7 +4257,7 @@ void vte_terminal_reset_pending_input(VteTerminal *terminal)
 }
 
 void
-vte_terminal_flush_pending_input(VteTerminal *terminal)
+console_controller_flush_pending_input(VteTerminal *terminal)
 {
 	glong i;
 	gchar *input_line;
@@ -4288,23 +4288,23 @@ vte_terminal_flush_pending_input(VteTerminal *terminal)
 	pvt->last_cmd = cmd;
 
 	vte_terminal_emit_line_received(terminal, input_line, pvt->input_length);
-	vte_terminal_reset_pending_input(terminal);
+	console_controller_reset_pending_input(terminal);
 }
 
-void vte_terminal_cursor_left(VteTerminal *terminal) {
+void console_controller_cursor_left(VteTerminal *terminal) {
 	if (terminal->pvt->user_input_mode) {
 		terminal->pvt->input_cursor = terminal->pvt->input_cursor->previous;
 		if (terminal->pvt->input_cursor_position > 0) terminal->pvt->input_cursor_position--;
 	}
 }
 
-void vte_terminal_cursor_right(VteTerminal *terminal) {
+void console_controller_cursor_right(VteTerminal *terminal) {
 	InputNode *cursor = terminal->pvt->input_cursor;
 
 	if (!terminal->pvt->user_input_mode) return;
 
 	if (cursor->next) terminal->pvt->input_cursor = cursor->next;
-	else vte_terminal_store_input(terminal, " ", 1);
+	else console_controller_store_input(terminal, " ", 1);
 
 	terminal->pvt->input_cursor_position++;
 }
@@ -4324,7 +4324,7 @@ slice_sprintnum(gchar **output, const gchar *format, const glong number)
 }
 
 static void
-vte_terminal_reprint_suffix(VteTerminal *terminal)
+console_controller_reprint_suffix(VteTerminal *terminal)
 {
 	gchar *suffix, *suffix_cmd, *backspace;
 
@@ -4359,7 +4359,7 @@ vte_terminal_reprint_suffix(VteTerminal *terminal)
 	}
 }
 
-void vte_terminal_delete_current_char(VteTerminal *terminal)
+void console_controller_delete_current_char(VteTerminal *terminal)
 {
 	InputNode *deleted_node = terminal->pvt->input_cursor->next;
 
@@ -4373,20 +4373,20 @@ void vte_terminal_delete_current_char(VteTerminal *terminal)
 			deleted_node->next->previous = deleted_node->previous;
 
 		vte_terminal_feed(terminal, "\033[0J", 4);
-		vte_terminal_reprint_suffix(terminal);
+		console_controller_reprint_suffix(terminal);
 
 		g_slice_free(InputNode, deleted_node);
 	}
 }
 
 static void
-vte_terminal_user_input(VteTerminal *terminal, gchar *text)
+console_controller_user_input(VteTerminal *terminal, gchar *text)
 {
 	const int length = strlen(text);
 
 	vte_terminal_feed(terminal, text, length);
-	vte_terminal_reprint_suffix(terminal);
-	vte_terminal_store_input(terminal, text, length);
+	console_controller_reprint_suffix(terminal);
+	console_controller_store_input(terminal, text, length);
 }
 
 
@@ -4395,7 +4395,7 @@ vte_terminal_im_commit(GtkIMContext *im_context, gchar *text, VteTerminal *termi
 {
 	_vte_debug_print(VTE_DEBUG_EVENTS,
 			"Input method committed `%s'.\n", text);
-  vte_terminal_user_input(terminal, text);
+	console_controller_user_input(terminal, text);
 	/* Committed text was committed because the user pressed a key, so
 	 * we need to obey the scroll-on-keystroke setting. */
 	if (terminal->pvt->scroll_on_keystroke) {
@@ -4452,7 +4452,7 @@ vte_terminal_im_preedit_changed(GtkIMContext *im_context, VteTerminal *terminal)
 }
 
 void
-vte_terminal_command_history_back(VteTerminal *terminal)
+console_controller_command_history_back(VteTerminal *terminal)
 {
 	VteCommandHistoryNode *history = terminal->pvt->cmd_history;
 	if (!history)
@@ -4460,16 +4460,16 @@ vte_terminal_command_history_back(VteTerminal *terminal)
 	else
 		terminal->pvt->cmd_history = history = history->previous;
 
-	if (history) vte_terminal_user_input(terminal, history->data);
+	if (history) console_controller_user_input(terminal, history->data);
 }
 
 void
-vte_terminal_command_history_forward(VteTerminal *terminal)
+console_controller_command_history_forward(VteTerminal *terminal)
 {
 	if (!terminal->pvt->cmd_history) return;
 	VteCommandHistoryNode *history = terminal->pvt->cmd_history->next;
 	terminal->pvt->cmd_history = history;
-	if (history) vte_terminal_user_input(terminal, history->data);
+	if (history) console_controller_user_input(terminal, history->data);
 }
 
 /* Handle the toplevel being reconfigured. */
@@ -4629,7 +4629,7 @@ vte_terminal_read_modifiers (VteTerminal *terminal,
 }
 
 static void
-vte_terminal_cursor_home(VteTerminal *terminal)
+console_controller_cursor_home(VteTerminal *terminal)
 {
 	gchar *cmdstr;
 	glong cmdlen;
@@ -4641,7 +4641,7 @@ vte_terminal_cursor_home(VteTerminal *terminal)
 }
 
 static void
-vte_terminal_cursor_end(VteTerminal *terminal)
+console_controller_cursor_end(VteTerminal *terminal)
 {
 	gchar *cmdstr;
 	glong cmdlen, num_backsteps = terminal->pvt->input_length - terminal->pvt->input_cursor_position;
@@ -4655,7 +4655,7 @@ vte_terminal_cursor_end(VteTerminal *terminal)
 }
 
 static void
-vte_terminal_clear_input(VteTerminal *terminal)
+console_controller_clear_input(VteTerminal *terminal)
 {
 	gchar *cmdstr;
 	glong cmdlen;
@@ -4831,7 +4831,7 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				suppress_meta_esc = TRUE;
 			} else {
-				vte_terminal_clear_input(terminal);
+				console_controller_clear_input(terminal);
 				vte_terminal_feed(terminal, "\033[U", 3);
 			}
 			handled = TRUE;
@@ -4844,7 +4844,7 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				suppress_meta_esc = TRUE;
 			} else {
-				vte_terminal_clear_input(terminal);
+				console_controller_clear_input(terminal);
         			vte_terminal_feed(terminal, "\033[V", 3);
 			}
 			handled = TRUE;
@@ -4884,7 +4884,7 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				handled = TRUE;
 			} else {
-				vte_terminal_cursor_home(terminal);
+				console_controller_cursor_home(terminal);
 			}
 			break;
 		case GDK_KP_End:
@@ -4894,7 +4894,7 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				handled = TRUE;
 			} else {
-				vte_terminal_cursor_end(terminal);
+				console_controller_cursor_end(terminal);
 			}
 			break;
 		/* Let Shift +/- tweak the font, like XTerm does. */
@@ -5149,7 +5149,7 @@ vte_terminal_paste_cb(GtkClipboard *clipboard, const gchar *text, gpointer data)
 				p++;
 			}
 		}
-		vte_terminal_user_input(terminal, paste);
+		console_controller_user_input(terminal, paste);
 		g_free(paste);
 	}
 }
@@ -7784,7 +7784,7 @@ vte_terminal_init(VteTerminal *terminal)
 	pvt->root_pixmap_changed_tag = 0;
 
 	pvt->user_input_mode = TRUE;
-	vte_terminal_reset_pending_input(terminal);
+	console_controller_reset_pending_input(terminal);
 
 	/* Not all backends generate GdkVisibilityNotify, so mark the
 	 * window as unobscured initially. */
