@@ -41,9 +41,24 @@ console_controller_new(VteTerminal *terminal)
 }
 
 void
-console_controller_free(ConsoleController *controller)
+console_controller_free(ConsoleController *ctrl)
 {
-	g_slice_free(ConsoleController, controller);
+	VteCommandHistoryNode *current_cmd;
+	InputNode *current_input;
+
+	current_cmd = ctrl->last_cmd;
+	while(current_cmd) {
+		current_cmd = current_cmd->previous;
+		g_slice_free(VteCommandHistoryNode, current_cmd->next);
+	}
+
+	current_input = ctrl->input_head;
+	while(current_input) {
+		current_input = current_input->next;
+		g_slice_free(InputNode, current_input->previous);
+	}
+
+	g_slice_free(ConsoleController, ctrl);
 }
 
 /* Emit a "line-received" signal. */
