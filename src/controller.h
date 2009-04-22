@@ -59,4 +59,6 @@ void console_controller_delete_current_char(ConsoleController *controller);
 void console_controller_cursor_home(ConsoleController *controller);
 void console_controller_cursor_end(ConsoleController *controller);
 
+gboolean console_controller_check_cursor_at_beginning(ConsoleController *ctrl);
+
 #endif

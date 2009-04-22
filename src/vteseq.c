@@ -1744,9 +1744,8 @@ vte_sequence_handler_le (VteTerminal *terminal, GValueArray *params)
 		_vte_terminal_cleanup_tab_fragments_at_cursor (terminal);
 		console_controller_cursor_left(terminal->pvt->controller);
 	} else if (screen->cursor_current.row > 0) {
-		/* Do not try to wrap if already at begining of the input */
-		InputNode *cursor = terminal->pvt->controller->input_cursor;
-		if (cursor == cursor->previous) return;
+		/* Do not try to wrap if already at beginning of the input */
+		if (console_controller_check_cursor_at_beginning(terminal->pvt->controller)) return;
 		/* Wrap to the previous line. */
 		screen->cursor_current.col = terminal->column_count - 1;
 		if (screen->scrolling_restricted) {

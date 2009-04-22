@@ -323,3 +323,10 @@ console_controller_cursor_end(ConsoleController *ctrl)
 
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 }
+
+gboolean
+console_controller_check_cursor_at_beginning(ConsoleController *ctrl)
+{
+	InputNode *cursor = ctrl->input_cursor;
+	return (cursor == cursor->previous);
+}
