@@ -9,6 +9,43 @@
 #include "vte.h"
 #include "vte-private.h"
 
+static void
+console_controller_reset_pending_input(ConsoleController *controller)
+{
+	InputNode *next_node, *current_node = controller->input_head;
+	while(current_node) {
+		next_node = current_node->next;
+		g_slice_free(InputNode, current_node);
+		current_node = next_node;
+	}
+
+	InputNode *head_node = g_slice_new(InputNode);
+	head_node->previous = head_node;
+	head_node->next = NULL;
+	head_node->charData = '\0';
+
+	controller->input_head = controller->input_cursor = head_node;
+	controller->input_length = controller->input_cursor_position = 0;
+}
+
+ConsoleController *
+console_controller_new(VteTerminal *terminal)
+{
+	ConsoleController *controller = g_slice_new0(ConsoleController);
+
+	controller->terminal = terminal;
+	controller->user_input_mode = TRUE;
+	console_controller_reset_pending_input(controller);
+
+	return controller;
+}
+
+void
+console_controller_free(ConsoleController *controller)
+{
+	g_slice_free(ConsoleController, controller);
+}
+
 /* Emit a "line-received" signal. */
 static void
 console_controller_emit_line_received(VteTerminal *terminal, const gchar *text, guint length)
@@ -35,27 +72,26 @@ console_controller_emit_line_received(VteTerminal *terminal, const gchar *text, 
 }
 
 void
-console_controller_stop_user_input(VteTerminal *terminal)
+console_controller_stop_user_input(ConsoleController *controller)
 {
-  terminal->pvt->user_input_mode = FALSE;
+	controller->user_input_mode = FALSE;
 }
 
 void
-console_controller_start_user_input(VteTerminal *terminal)
+console_controller_start_user_input(ConsoleController *controller)
 {
-  terminal->pvt->user_input_mode = TRUE;
+	controller->user_input_mode = TRUE;
 }
 
 static void
-console_controller_store_input(VteTerminal *terminal, gchar *text, glong length)
+console_controller_store_input(ConsoleController *ctrl, gchar *text, glong length)
 {
 	glong i;
 	InputNode *current_node, *last_node;
-	VteTerminalPrivate *pvt = terminal->pvt;
 
-	if (!pvt->user_input_mode) return;
+	if (!ctrl->user_input_mode) return;
 
-	last_node = pvt->input_cursor;
+	last_node = ctrl->input_cursor;
   	for(i = 0; i < length; ++i) {
 		InputNode *next_node = last_node->next;
 		current_node = g_slice_new0(InputNode);
@@ -69,43 +105,24 @@ console_controller_store_input(VteTerminal *terminal, gchar *text, glong length)
 		last_node = current_node;
 	}
 
-	terminal->pvt->input_cursor = last_node;
-	terminal->pvt->input_length += length;
-	terminal->pvt->input_cursor_position += length;
-}
-
-void console_controller_reset_pending_input(VteTerminal *terminal)
-{
-	InputNode *next_node, *current_node = terminal->pvt->input_head;
-	while(current_node) {
-		next_node = current_node->next;
-		g_slice_free(InputNode, current_node);
-		current_node = next_node;
-	}
-
-	InputNode *head_node = g_slice_new(InputNode);
-	head_node->previous = head_node;
-	head_node->next = NULL;
-	head_node->charData = '\0';
-
-	terminal->pvt->input_head = terminal->pvt->input_cursor = head_node;
-	terminal->pvt->input_length = terminal->pvt->input_cursor_position = 0;
+	ctrl->input_cursor = last_node;
+	ctrl->input_length += length;
+	ctrl->input_cursor_position += length;
 }
 
 void
-console_controller_flush_pending_input(VteTerminal *terminal)
+console_controller_flush_pending_input(ConsoleController *ctrl)
 {
 	glong i;
 	gchar *input_line;
 	InputNode *current_node;
 	VteCommandHistoryNode *cmd;
-	VteTerminalPrivate *pvt = terminal->pvt;
 
-	if (!pvt->user_input_mode) return;
+	if (!ctrl->user_input_mode) return;
 
-	input_line = (gchar*) g_slice_alloc((pvt->input_length + 1) * sizeof(gchar));
+	input_line = (gchar*) g_slice_alloc((ctrl->input_length + 1) * sizeof(gchar));
 
-	current_node = pvt->input_head->next;
+	current_node = ctrl->input_head->next;
 	i = 0;
 	while(current_node) {
 		input_line[i++] = current_node->charData;
@@ -114,35 +131,35 @@ console_controller_flush_pending_input(VteTerminal *terminal)
 	input_line[i] = '\0';
 
 	cmd = g_slice_new0(VteCommandHistoryNode);
-	if (pvt->last_cmd) {
-		pvt->last_cmd->next = cmd;
-		cmd->previous = pvt->last_cmd;
+	if (ctrl->last_cmd) {
+		ctrl->last_cmd->next = cmd;
+		cmd->previous = ctrl->last_cmd;
 	} else {
 		cmd->previous = cmd;
 	}
 	cmd->data = input_line;
-	pvt->last_cmd = cmd;
+	ctrl->last_cmd = cmd;
 
-	console_controller_emit_line_received(terminal, input_line, pvt->input_length);
-	console_controller_reset_pending_input(terminal);
+	console_controller_emit_line_received(ctrl->terminal, input_line, ctrl->input_length);
+	console_controller_reset_pending_input(ctrl);
 }
 
-void console_controller_cursor_left(VteTerminal *terminal) {
-	if (terminal->pvt->user_input_mode) {
-		terminal->pvt->input_cursor = terminal->pvt->input_cursor->previous;
-		if (terminal->pvt->input_cursor_position > 0) terminal->pvt->input_cursor_position--;
+void console_controller_cursor_left(ConsoleController *ctrl) {
+	if (ctrl->user_input_mode) {
+		ctrl->input_cursor = ctrl->input_cursor->previous;
+		if (ctrl->input_cursor_position > 0) ctrl->input_cursor_position--;
 	}
 }
 
-void console_controller_cursor_right(VteTerminal *terminal) {
-	InputNode *cursor = terminal->pvt->input_cursor;
+void console_controller_cursor_right(ConsoleController *ctrl) {
+	InputNode *cursor = ctrl->input_cursor;
 
-	if (!terminal->pvt->user_input_mode) return;
+	if (!ctrl->user_input_mode) return;
 
-	if (cursor->next) terminal->pvt->input_cursor = cursor->next;
-	else console_controller_store_input(terminal, " ", 1);
+	if (cursor->next) ctrl->input_cursor = cursor->next;
+	else console_controller_store_input(ctrl, (gchar*) " ", 1);
 
-	terminal->pvt->input_cursor_position++;
+	ctrl->input_cursor_position++;
 }
 
 static glong
@@ -160,16 +177,15 @@ slice_sprintnum(gchar **output, const gchar *format, const glong number)
 }
 
 static void
-console_controller_reprint_suffix(VteTerminal *terminal)
+console_controller_reprint_suffix(ConsoleController *ctrl)
 {
 	gchar *suffix, *suffix_cmd, *backspace;
 
 	glong bksplen, avlen, suflen = 0;
-	VteTerminalPrivate *pvt = terminal->pvt;
-	InputNode *cursor = pvt->input_cursor->next;
+	InputNode *cursor = ctrl->input_cursor->next;
 
 	if (cursor) {
-		avlen = pvt->input_length + 1;
+		avlen = ctrl->input_length + 1;
 		suffix = (gchar*) g_slice_alloc(avlen * sizeof(gchar));
 		while(cursor) {
 			suffix[suflen++] = cursor->charData;
@@ -188,107 +204,107 @@ console_controller_reprint_suffix(VteTerminal *terminal)
 	}
 
 	if (suflen) {
-		vte_terminal_feed(terminal, suffix_cmd, suflen + bksplen);
+		vte_terminal_feed(ctrl->terminal, suffix_cmd, suflen + bksplen);
 		if (suffix_cmd != suffix) g_slice_free1((suflen + bksplen) * sizeof(gchar), suffix_cmd);
 		g_slice_free1(avlen * sizeof(gchar), suffix);
 		g_slice_free1(bksplen * sizeof(gchar), backspace);
 	}
 }
 
-void console_controller_delete_current_char(VteTerminal *terminal)
+void console_controller_delete_current_char(ConsoleController *ctrl)
 {
-	InputNode *deleted_node = terminal->pvt->input_cursor->next;
+	InputNode *deleted_node = ctrl->input_cursor->next;
 
-	if (!terminal->pvt->user_input_mode) return;
+	if (!ctrl->user_input_mode) return;
 
 	if (deleted_node) {
-		--terminal->pvt->input_length;
+		--ctrl->input_length;
 		if (deleted_node->previous)
       			deleted_node->previous->next = deleted_node->next;
 		if (deleted_node->next)
 			deleted_node->next->previous = deleted_node->previous;
 
-		vte_terminal_feed(terminal, "\033[0J", 4);
-		console_controller_reprint_suffix(terminal);
+		vte_terminal_feed(ctrl->terminal, "\033[0J", 4);
+		console_controller_reprint_suffix(ctrl);
 
 		g_slice_free(InputNode, deleted_node);
 	}
 }
 
 void
-console_controller_user_input(VteTerminal *terminal, gchar *text)
+console_controller_user_input(ConsoleController *ctrl, gchar *text)
 {
 	const int length = strlen(text);
 
-	vte_terminal_feed(terminal, text, length);
-	console_controller_reprint_suffix(terminal);
-	console_controller_store_input(terminal, text, length);
+	vte_terminal_feed(ctrl->terminal, text, length);
+	console_controller_reprint_suffix(ctrl);
+	console_controller_store_input(ctrl, text, length);
 }
 
 static void
-console_controller_clear_input(VteTerminal *terminal)
+console_controller_clear_input(ConsoleController *ctrl)
 {
 	gchar *cmdstr;
 	glong cmdlen;
 
-	if (terminal->pvt->input_cursor_position == 0) return;
+	if (ctrl->input_cursor_position == 0) return;
 
-	cmdlen = slice_sprintnum(&cmdstr, "\033[O\033[%dD", terminal->pvt->input_cursor_position);
-	vte_terminal_feed(terminal, cmdstr, cmdlen);
+	cmdlen = slice_sprintnum(&cmdstr, "\033[O\033[%dD", ctrl->input_cursor_position);
+	vte_terminal_feed(ctrl->terminal, cmdstr, cmdlen);
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 
-	cmdlen = slice_sprintnum(&cmdstr, "\033[%dP\033[0J\033[N", terminal->pvt->input_cursor_position);
-	vte_terminal_feed(terminal, cmdstr, cmdlen);
+	cmdlen = slice_sprintnum(&cmdstr, "\033[%dP\033[0J\033[N", ctrl->input_cursor_position);
+	vte_terminal_feed(ctrl->terminal, cmdstr, cmdlen);
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 
-	console_controller_reset_pending_input(terminal);
+	console_controller_reset_pending_input(ctrl);
 }
 
 void
-console_controller_command_history_back(VteTerminal *terminal)
+console_controller_command_history_back(ConsoleController *ctrl)
 {
-	VteCommandHistoryNode *history = terminal->pvt->cmd_history;
-	console_controller_clear_input(terminal);
+	VteCommandHistoryNode *history = ctrl->cmd_history;
+	console_controller_clear_input(ctrl);
 	if (!history)
-		terminal->pvt->cmd_history = history = terminal->pvt->last_cmd;
+		ctrl->cmd_history = history = ctrl->last_cmd;
 	else
-		terminal->pvt->cmd_history = history = history->previous;
+		ctrl->cmd_history = history = history->previous;
 
-	if (history) console_controller_user_input(terminal, history->data);
+	if (history) console_controller_user_input(ctrl, history->data);
 }
 
 void
-console_controller_command_history_forward(VteTerminal *terminal)
+console_controller_command_history_forward(ConsoleController *ctrl)
 {
-	console_controller_clear_input(terminal);
-	if (!terminal->pvt->cmd_history) return;
-	VteCommandHistoryNode *history = terminal->pvt->cmd_history->next;
-	terminal->pvt->cmd_history = history;
-	if (history) console_controller_user_input(terminal, history->data);
+	console_controller_clear_input(ctrl);
+	if (!ctrl->cmd_history) return;
+	VteCommandHistoryNode *history = ctrl->cmd_history->next;
+	ctrl->cmd_history = history;
+	if (history) console_controller_user_input(ctrl, history->data);
 }
 
 void
-console_controller_cursor_home(VteTerminal *terminal)
+console_controller_cursor_home(ConsoleController *ctrl)
 {
 	gchar *cmdstr;
 	glong cmdlen;
 
-	cmdlen = slice_sprintnum(&cmdstr, "\033[%dD", terminal->pvt->input_cursor_position);
-	vte_terminal_feed(terminal, cmdstr, cmdlen);
+	cmdlen = slice_sprintnum(&cmdstr, "\033[%dD", ctrl->input_cursor_position);
+	vte_terminal_feed(ctrl->terminal, cmdstr, cmdlen);
 
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 }
 
 void
-console_controller_cursor_end(VteTerminal *terminal)
+console_controller_cursor_end(ConsoleController *ctrl)
 {
 	gchar *cmdstr;
-	glong cmdlen, num_backsteps = terminal->pvt->input_length - terminal->pvt->input_cursor_position;
+	glong cmdlen, num_backsteps = ctrl->input_length - ctrl->input_cursor_position;
 
 	if (0 == num_backsteps) return;
 
 	cmdlen = slice_sprintnum(&cmdstr, "\033[%dC", num_backsteps);
-	vte_terminal_feed(terminal, cmdstr, cmdlen);
+	vte_terminal_feed(ctrl->terminal, cmdstr, cmdlen);
 
 	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
 }

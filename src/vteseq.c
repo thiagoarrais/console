@@ -397,8 +397,6 @@ _vte_terminal_clear_current_line (VteTerminal *terminal)
 
 	/* We've modified the display.  Make a note of it. */
 	terminal->pvt->text_deleted_flag = TRUE;
-
-	console_controller_reset_pending_input(terminal);
 }
 
 /* Clear above the current line. */
@@ -1034,7 +1032,7 @@ vte_sequence_handler_as (VteTerminal *terminal, GValueArray *params)
 static void
 vte_sequence_handler_bk (VteTerminal *terminal, GValueArray *params)
 {
-	console_controller_command_history_back(terminal);
+	console_controller_command_history_back(terminal->pvt->controller);
 }
 
 /* Beep. */
@@ -1477,7 +1475,7 @@ vte_sequence_handler_dc (VteTerminal *terminal, GValueArray *params)
 		}
 	}
 
-	console_controller_delete_current_char(terminal);
+	console_controller_delete_current_char(terminal->pvt->controller);
 
 	/* We've modified the display.  Make a note of it. */
 	terminal->pvt->text_deleted_flag = TRUE;
@@ -1656,7 +1654,7 @@ vte_sequence_handler_fs (VteTerminal *terminal, GValueArray *params)
 static void
 vte_sequence_handler_fw (VteTerminal *terminal, GValueArray *params)
 {
-	console_controller_command_history_forward(terminal);
+	console_controller_command_history_forward(terminal->pvt->controller);
 }
 
 /* Move the cursor to the home position. */
@@ -1744,10 +1742,10 @@ vte_sequence_handler_le (VteTerminal *terminal, GValueArray *params)
 		/* There's room to move left, so do so. */
 		screen->cursor_current.col--;
 		_vte_terminal_cleanup_tab_fragments_at_cursor (terminal);
-		console_controller_cursor_left(terminal);
+		console_controller_cursor_left(terminal->pvt->controller);
 	} else if (screen->cursor_current.row > 0) {
 		/* Do not try to wrap if already at begining of the input */
-		InputNode *cursor = terminal->pvt->input_cursor;
+		InputNode *cursor = terminal->pvt->controller->input_cursor;
 		if (cursor == cursor->previous) return;
 		/* Wrap to the previous line. */
 		screen->cursor_current.col = terminal->column_count - 1;
@@ -1757,7 +1755,7 @@ vte_sequence_handler_le (VteTerminal *terminal, GValueArray *params)
 			screen->cursor_current.row = MAX(screen->cursor_current.row - 1,
 							 screen->insert_delta);
 		}
-		console_controller_cursor_left(terminal);
+		console_controller_cursor_left(terminal->pvt->controller);
 	}
 }
 
@@ -1847,7 +1845,7 @@ vte_sequence_handler_nd (VteTerminal *terminal, GValueArray *params)
 		screen->cursor_current.col = 0;
 		screen->cursor_current.row++;
 	}
-	console_controller_cursor_right(terminal);
+	console_controller_cursor_right(terminal->pvt->controller);
 }
 
 /* Move the cursor to the beginning of the next line, scrolling if necessary. */
@@ -2015,19 +2013,19 @@ static void
 vte_sequence_handler_sf (VteTerminal *terminal, GValueArray *params)
 {
 	_vte_terminal_cursor_down (terminal);
-	console_controller_flush_pending_input(terminal);
+	console_controller_flush_pending_input(terminal->pvt->controller);
 }
 
 static void
 vte_sequence_handler_ai (VteTerminal *terminal, GValueArray *params)
 {
-  console_controller_stop_user_input(terminal);
+	console_controller_stop_user_input(terminal->pvt->controller);
 }
 
 static void
 vte_sequence_handler_ui (VteTerminal *terminal, GValueArray *params)
 {
-  console_controller_start_user_input(terminal);
+	console_controller_start_user_input(terminal->pvt->controller);
 }
 
 /* Cursor down, with scrolling. */

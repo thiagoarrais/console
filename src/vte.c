@@ -39,7 +39,6 @@
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
 #include <pango/pango.h>
-#include "controller.h"
 #include "iso2022.h"
 #include "keymap.h"
 #include "marshal.h"
@@ -4179,7 +4178,7 @@ vte_terminal_im_commit(GtkIMContext *im_context, gchar *text, VteTerminal *termi
 {
 	_vte_debug_print(VTE_DEBUG_EVENTS,
 			"Input method committed `%s'.\n", text);
-	console_controller_user_input(terminal, text);
+	console_controller_user_input(terminal->pvt->controller, text);
 	/* Committed text was committed because the user pressed a key, so
 	 * we need to obey the scroll-on-keystroke setting. */
 	if (terminal->pvt->scroll_on_keystroke) {
@@ -4604,7 +4603,7 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				handled = TRUE;
 			} else {
-				console_controller_cursor_home(terminal);
+				console_controller_cursor_home(terminal->pvt->controller);
 			}
 			break;
 		case GDK_KP_End:
@@ -4614,7 +4613,7 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 				scrolled = TRUE;
 				handled = TRUE;
 			} else {
-				console_controller_cursor_end(terminal);
+				console_controller_cursor_end(terminal->pvt->controller);
 			}
 			break;
 		/* Let Shift +/- tweak the font, like XTerm does. */
@@ -4869,7 +4868,7 @@ vte_terminal_paste_cb(GtkClipboard *clipboard, const gchar *text, gpointer data)
 				p++;
 			}
 		}
-		console_controller_user_input(terminal, paste);
+		console_controller_user_input(terminal->pvt->controller, paste);
 		g_free(paste);
 	}
 }
@@ -7503,8 +7502,7 @@ vte_terminal_init(VteTerminal *terminal)
 	pvt->has_fonts = FALSE;
 	pvt->root_pixmap_changed_tag = 0;
 
-	pvt->user_input_mode = TRUE;
-	console_controller_reset_pending_input(terminal);
+	pvt->controller = console_controller_new(terminal);
 
 	/* Not all backends generate GdkVisibilityNotify, so mark the
 	 * window as unobscured initially. */
@@ -7827,6 +7825,11 @@ vte_terminal_finalize(GObject *object)
 	guint i;
 
 	_vte_debug_print(VTE_DEBUG_LIFECYCLE, "vte_terminal_finalize()\n");
+
+	/* Free the controlling structure */
+	if (terminal->pvt->controller != NULL) {
+		console_controller_free(terminal->pvt->controller);
+	}
 
 	/* Free the draw structure. */
 	if (terminal->pvt->draw != NULL) {

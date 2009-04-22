@@ -47,6 +47,8 @@
 #include "ring.h"
 #include "caps.h"
 
+#include "controller.h"
+
 G_BEGIN_DECLS
 
 #define VTE_PAD_WIDTH			1
@@ -183,18 +185,6 @@ typedef struct _VteRowData {
 	GArray *cells;
 	guchar soft_wrapped: 1;
 } VteRowData;
-
-typedef struct InputNode {
-  gchar charData;
-  struct InputNode *previous;
-  struct InputNode *next;
-} InputNode;
-
-typedef struct VteCommandHistoryNode {
-	gchar *data;
-	struct VteCommandHistoryNode *previous;
-	struct VteCommandHistoryNode *next;
-} VteCommandHistoryNode;
 
 /* Terminal private data. */
 struct _VteTerminalPrivate {
@@ -428,18 +418,7 @@ struct _VteTerminalPrivate {
 	glong underline_position;
 	glong strikethrough_position;
 
-	/* Pending user input */
-	InputNode *input_cursor;
-	InputNode *input_head;
-	glong input_length;
-	glong input_cursor_position;
-
-	/* Command history */
-	VteCommandHistoryNode *cmd_history;
-	VteCommandHistoryNode *last_cmd;
-
-	/* Is the data being fed by the user or by the app? */
-	gboolean user_input_mode;
+	struct ConsoleController *controller;
 };
 
 
