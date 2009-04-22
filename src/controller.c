@@ -43,19 +43,21 @@ console_controller_new(VteTerminal *terminal)
 void
 console_controller_free(ConsoleController *ctrl)
 {
-	VteCommandHistoryNode *current_cmd;
-	InputNode *current_input;
+	VteCommandHistoryNode *current_cmd, *last_cmd;
+	InputNode *current_input, *last_input;
 
 	current_cmd = ctrl->last_cmd;
 	while(current_cmd) {
+		last_cmd = current_cmd;
 		current_cmd = current_cmd->previous;
-		g_slice_free(VteCommandHistoryNode, current_cmd->next);
+		g_slice_free(VteCommandHistoryNode, last_cmd);
 	}
 
 	current_input = ctrl->input_head;
 	while(current_input) {
+		last_input = current_input;
 		current_input = current_input->next;
-		g_slice_free(InputNode, current_input->previous);
+		g_slice_free(InputNode, last_input);
 	}
 
 	g_slice_free(ConsoleController, ctrl);
