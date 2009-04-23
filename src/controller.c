@@ -130,8 +130,8 @@ console_controller_store_input(ConsoleController *ctrl, gchar *text, glong lengt
 void
 console_controller_flush_pending_input(ConsoleController *ctrl)
 {
-	glong i;
-	gchar *input_line;
+	glong i, num_down_steps, cursor_position, num_columns;
+	gchar *input_line, *cmd_step_down;
 	InputNode *current_node;
 	VteCommandHistoryNode *cmd;
 
@@ -140,12 +140,23 @@ console_controller_flush_pending_input(ConsoleController *ctrl)
 	input_line = (gchar*) g_slice_alloc((ctrl->input_length + 1) * sizeof(gchar));
 
 	current_node = ctrl->input_head->next;
-	i = 0;
+	i = cursor_position = 0;
 	while(current_node) {
+		if (current_node == ctrl->input_cursor) cursor_position = i;
 		input_line[i++] = current_node->charData;
 		current_node = current_node->next;
 	}
 	input_line[i] = '\0';
+
+	num_columns = ctrl->terminal->column_count;
+	num_down_steps = i / num_columns - cursor_position / num_columns;
+	if (num_down_steps > 0) {
+		cmd_step_down = g_strnfill(num_down_steps, '\n');
+		vte_terminal_feed(ctrl->terminal, "\033[O", 3);
+		vte_terminal_feed(ctrl->terminal, cmd_step_down, num_down_steps);
+		vte_terminal_feed(ctrl->terminal, "\033[N", 3);
+		g_free(cmd_step_down);
+	}
 
 	cmd = g_slice_new0(VteCommandHistoryNode);
 	if (ctrl->last_cmd) {
