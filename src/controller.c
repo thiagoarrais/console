@@ -149,7 +149,7 @@ console_controller_flush_pending_input(ConsoleController *ctrl)
 	input_line[i] = '\0';
 
 	num_columns = ctrl->terminal->column_count;
-	num_down_steps = i / num_columns - cursor_position / num_columns;
+	num_down_steps = ctrl->input_length / num_columns - cursor_position / num_columns;
 	if (num_down_steps > 0) {
 		cmd_step_down = g_strnfill(num_down_steps, '\n');
 		vte_terminal_feed(ctrl->terminal, "\033[O", 3);
