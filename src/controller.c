@@ -97,7 +97,18 @@ console_controller_stop_user_input(ConsoleController *controller)
 void
 console_controller_start_user_input(ConsoleController *controller)
 {
+	vte_terminal_feed(controller->terminal, controller->prompt, controller->prompt_length);
 	controller->user_input_mode = TRUE;
+}
+
+void
+console_controller_set_command_prompt(ConsoleController *ctrl, const gchar *text)
+{
+	ctrl->prompt = g_strdup(text);
+	ctrl->prompt_length = strlen(text);
+
+	if (ctrl->user_input_mode)
+		vte_terminal_feed(ctrl->terminal, text, ctrl->prompt_length);
 }
 
 static void

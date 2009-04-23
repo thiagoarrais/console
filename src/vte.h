@@ -215,6 +215,8 @@ GtkWidget *vte_terminal_new(void);
 void vte_terminal_begin_app_output(VteTerminal *terminal);
 void vte_terminal_finish_app_output(VteTerminal *terminal);
 
+void vte_terminal_set_command_prompt(VteTerminal *terminal, const gchar *text);
+
 /* Send data to the terminal to display, or to the terminal's forked command
  * to handle in some way.  If it's 'cat', they should be the same. */
 void vte_terminal_feed(VteTerminal *terminal, const char *data, glong length);

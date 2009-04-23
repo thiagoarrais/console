@@ -30,6 +30,10 @@ typedef struct ConsoleController {
 	VteCommandHistoryNode *cmd_history;
 	VteCommandHistoryNode *last_cmd;
 
+	/* Command prompt */
+	gchar *prompt;
+	glong prompt_length;
+
 	/* Is the data being fed by the user or by the app? */
 	gboolean user_input_mode;
 } ConsoleController;
@@ -39,6 +43,8 @@ void console_controller_free(ConsoleController *controller);
 
 void console_controller_start_user_input(ConsoleController *controller);
 void console_controller_stop_user_input(ConsoleController *controller);
+
+void console_controller_set_command_prompt(ConsoleController *controller, const gchar *text);
 
 void console_controller_user_input(ConsoleController *controller, gchar *text);
 

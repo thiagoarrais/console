@@ -3892,13 +3892,19 @@ out:
 void
 vte_terminal_begin_app_output(VteTerminal *terminal)
 {
-  vte_terminal_feed(terminal, "\033[O", 3);
+	vte_terminal_feed(terminal, "\033[O", 3);
 }
 
 void
 vte_terminal_finish_app_output(VteTerminal *terminal)
 {
-  vte_terminal_feed(terminal, "\033[N", 3);
+	vte_terminal_feed(terminal, "\033[N", 3);
+}
+
+void
+vte_terminal_set_command_prompt(VteTerminal *terminal, const gchar *text)
+{
+	console_controller_set_command_prompt(terminal->pvt->controller, text);
 }
 
 /**
