@@ -97,7 +97,6 @@ console_controller_stop_user_input(ConsoleController *controller)
 void
 console_controller_start_user_input(ConsoleController *controller)
 {
-	vte_terminal_feed(controller->terminal, controller->prompt, controller->prompt_length);
 	controller->user_input_mode = TRUE;
 }
 
@@ -181,6 +180,7 @@ console_controller_flush_pending_input(ConsoleController *ctrl)
 
 	console_controller_emit_line_received(ctrl->terminal, input_line, ctrl->input_length);
 	console_controller_reset_pending_input(ctrl);
+	vte_terminal_feed(ctrl->terminal, ctrl->prompt, ctrl->prompt_length);
 }
 
 void console_controller_cursor_left(ConsoleController *ctrl) {
