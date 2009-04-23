@@ -4517,14 +4517,15 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 		/* Map the key to a sequence name if we can. */
 		switch (keyval) {
 		case GDK_BackSpace:
-      vte_terminal_feed(terminal, "\033[D\033[P", 6);
-      handled = TRUE;
-      break;
+			if (!console_controller_check_cursor_at_beginning(terminal->pvt->controller))
+				vte_terminal_feed(terminal, "\033[D\033[P", 6);
+			handled = TRUE;
+			break;
 		case GDK_KP_Delete:
 		case GDK_Delete:
-      vte_terminal_feed(terminal, "\033[P", 3);
-      handled = TRUE;
-      break;
+			vte_terminal_feed(terminal, "\033[P", 3);
+			handled = TRUE;
+			break;
 		case GDK_KP_Insert:
 		case GDK_Insert:
 			if (modifiers & GDK_SHIFT_MASK) {
@@ -4570,14 +4571,15 @@ vte_terminal_key_press(GtkWidget *widget, GdkEventKey *event)
 			break;
 		case GDK_KP_Right:
 		case GDK_Right:
-      vte_terminal_feed(terminal, "\033[C", 3);
+			vte_terminal_feed(terminal, "\033[C", 3);
 			handled = TRUE;
-      break;
+			break;
 		case GDK_KP_Left:
 		case GDK_Left:
-      vte_terminal_feed(terminal, "\033[D", 3);
+			if (!console_controller_check_cursor_at_beginning(terminal->pvt->controller))
+				vte_terminal_feed(terminal, "\033[D", 3);
 			handled = TRUE;
-      break;
+			break;
 		case GDK_KP_Page_Up:
 		case GDK_Page_Up:
 			if (modifiers & GDK_SHIFT_MASK) {
