@@ -3889,24 +3889,6 @@ out:
 	return again;
 }
 
-void
-vte_terminal_begin_app_output(VteTerminal *terminal)
-{
-	vte_terminal_feed(terminal, "\033[O", 3);
-}
-
-void
-vte_terminal_finish_app_output(VteTerminal *terminal)
-{
-	vte_terminal_feed(terminal, "\033[N", 3);
-}
-
-void
-vte_terminal_set_command_prompt(VteTerminal *terminal, const gchar *text)
-{
-	console_controller_set_command_prompt(terminal->pvt->controller, text);
-}
-
 /**
  * vte_terminal_feed:
  * @terminal: a #VteTerminal
@@ -10653,7 +10635,6 @@ vte_terminal_class_init(VteTerminalClass *klass)
 	klass->cursor_moved = NULL;
 	klass->status_line_changed = NULL;
 	klass->commit = NULL;
-  klass->line_received = NULL;
 
 	klass->deiconify_window = NULL;
 	klass->iconify_window = NULL;
@@ -10756,15 +10737,6 @@ vte_terminal_class_init(VteTerminalClass *klass)
 			     NULL,
 			     _vte_marshal_VOID__STRING_UINT,
 			     G_TYPE_NONE, 2, G_TYPE_STRING, G_TYPE_UINT);
-	klass->line_received_signal =
-		g_signal_new("line-received",
-			     G_OBJECT_CLASS_TYPE(klass),
-			     G_SIGNAL_RUN_LAST,
-			     G_STRUCT_OFFSET(VteTerminalClass, line_received),
-			     NULL,
-			     NULL,
-			     _vte_marshal_VOID__STRING,
-			     G_TYPE_NONE, 1, G_TYPE_STRING);
 	klass->emulation_changed_signal =
                 g_signal_new(I_("emulation-changed"),
 			     G_OBJECT_CLASS_TYPE(klass),

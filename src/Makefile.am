@@ -3,7 +3,7 @@ EXTRA_DIST = iso2022.txt
 
 # The library
 
-pkginclude_HEADERS = vte.h vteaccess.h vtetypebuiltins.h vteversion.h
+pkginclude_HEADERS = console.h
 
 lib_LTLIBRARIES = libvte.la
 
@@ -33,6 +33,8 @@ libvte_la_SOURCES = \
 	buffer.h \
 	caps.c \
 	caps.h \
+	console.c \
+	console.h \
 	controller.c \
 	controller.h \
 	debug.c \
@@ -107,7 +109,7 @@ libvte_la_CFLAGS = $(VTE_CFLAGS)
 libvte_la_LIBADD = $(VTE_LIBS)
 libvte_la_LDFLAGS = \
 	-version-info $(LIBVTE_LTVERSION) \
-	-export-symbols-regex "^vte_terminal_.*|^_vte_pty_.*|^vte_reaper_.*" \
+	-export-symbols-regex "^console_console_.*" \
 	@LIBTOOL_EXPORT_OPTIONS@ @LIBTOOL_FLAGS@
 
 
@@ -151,15 +153,6 @@ vteseq-list.h: vteseq-2.gperf vteseq-n.gperf
 	echo '/* Generated file.  Do not edit */' > $@.tmp && \
 	cat $^ | grep -v '^#' | grep '\<VTE_SEQUENCE_HANDLER\>'| sed 's/.*, //' | LANG=C sort -u >> $@.tmp && \
 	mv -f $@.tmp $@
-
-
-# vte the application
-
-bin_PROGRAMS = vte
-
-vte_SOURCES = vteapp.c
-vte_CFLAGS = $(VTE_CFLAGS) $(X_CFLAGS)
-vte_LDADD = libvte.la $(LIBS) $(VTE_LIBS) $(X_LIBS)
 
 
 # Misc unit tests and utilities

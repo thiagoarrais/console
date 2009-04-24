@@ -80,7 +80,6 @@ struct _VteTerminalClass {
 	void (*cursor_moved)(VteTerminal* terminal);
 	void (*status_line_changed)(VteTerminal* terminal);
 	void (*commit)(VteTerminal* terminal, gchar *text, guint size);
-	void (*line_received)(VteTerminal* terminal, gchar *text, guint size);
 
 	void (*deiconify_window)(VteTerminal* terminal);
 	void (*iconify_window)(VteTerminal* terminal);
@@ -126,7 +125,6 @@ struct _VteTerminalClass {
 	guint cursor_moved_signal;
 	guint status_line_changed_signal;
 	guint commit_signal;
-	guint line_received_signal;
 
 	guint deiconify_window_signal;
 	guint iconify_window_signal;
@@ -209,13 +207,6 @@ GType vte_terminal_get_type(void);
 #define VTE_TERMINAL_GET_CLASS(obj)	(G_TYPE_INSTANCE_GET_CLASS ((obj), VTE_TYPE_TERMINAL, VteTerminalClass))
 
 GtkWidget *vte_terminal_new(void);
-
-/* Mark a block of data (sent through vte_terminal_feed) as app data that should
- * not be interpreted as user input */
-void vte_terminal_begin_app_output(VteTerminal *terminal);
-void vte_terminal_finish_app_output(VteTerminal *terminal);
-
-void vte_terminal_set_command_prompt(VteTerminal *terminal, const gchar *text);
 
 /* Send data to the terminal to display, or to the terminal's forked command
  * to handle in some way.  If it's 'cat', they should be the same. */
