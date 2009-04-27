@@ -5,9 +5,9 @@ includedir=@includedir@
 
 defaultemulation=@VTE_DEFAULT_EMULATION@
 
-Name: vte
-Description: Vte terminal widget.
+Name: console
+Description: Simple console widget.
 Version: @VERSION@
-Requires: @VTE_PKGS@
-Libs: -L${libdir} -lvte @OTHERLIBS@
+Requires: @CONSOLE_PKGS@
+Libs: -L${libdir} -lconsole @OTHERLIBS@
 Cflags: -I${includedir} @OTHERCFLAGS@

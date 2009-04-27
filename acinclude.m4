@@ -34,11 +34,12 @@ CPPFLAGS="$save_CPPFLAGS"
 # Configure paths for FreeType2
 # Marcelo Magallon 2001-10-26, based on gtk.m4 by Owen Taylor
 # Renamed to VTE_CHECK_FT2 so that it doesn't get dropped, otherwise identical.
+# Renamed to CONSOLE_CHECK_FT2 during the console fork
 
-dnl VTE_CHECK_FT2([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
+dnl CONSOLE_CHECK_FT2([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND]]])
 dnl Test for FreeType2, and define FT2_CFLAGS and FT2_LIBS
 dnl
-AC_DEFUN([VTE_CHECK_FT2],
+AC_DEFUN([CONSOLE_CHECK_FT2],
 [dnl
 dnl Get the cflags and libraries from the freetype-config script
 dnl

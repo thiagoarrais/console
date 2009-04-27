@@ -7,7 +7,7 @@ SUBDIRS += glade
 endif
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = vte.pc
+pkgconfig_DATA = console.pc
 
 DISTCHECK_CONFIGURE_FLAGS = --enable-gtk-doc
 

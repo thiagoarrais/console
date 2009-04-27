@@ -3,11 +3,12 @@ EXTRA_DIST = iso2022.txt
 
 # The library
 
-pkginclude_HEADERS = console.h
+pkginclude_HEADERS = console.h controller.h vte.h vtetypebuiltins.h vteversion.h
 
-lib_LTLIBRARIES = libvte.la
 
-EXTRA_libvte_la_SOURCES = \
+lib_LTLIBRARIES = libconsole.la
+
+EXTRA_libconsole_la_SOURCES = \
 	genkeysyms.py \
 	keysyms.c \
 	marshal.list \
@@ -28,7 +29,7 @@ EXTRA_libvte_la_SOURCES = \
 	vtetypebuiltins.h.template \
 	$(NULL)
 
-libvte_la_SOURCES = \
+libconsole_la_SOURCES = \
 	buffer.c \
 	buffer.h \
 	caps.c \
@@ -93,22 +94,22 @@ libvte_la_SOURCES = \
 	$(NULL)
 
 if BUILD_XFT
-libvte_la_SOURCES += \
+libconsole_la_SOURCES += \
 	vtexft.c \
 	vtexft.h
 endif
 
-libvte_la_CPPFLAGS = \
+libconsole_la_CPPFLAGS = \
 	-DG_DISABLE_ASSERT \
 	-DG_LOG_DOMAIN=\"Vte\" \
  	-DDATADIR='"$(datadir)"' \
 	-DLIBEXECDIR='"$(libexecdir)"' \
 	-DLOCALEDIR='"$(localedir)"' \
 	-DVTE_COMPILATION
-libvte_la_CFLAGS = $(VTE_CFLAGS)
-libvte_la_LIBADD = $(VTE_LIBS)
-libvte_la_LDFLAGS = \
-	-version-info $(LIBVTE_LTVERSION) \
+libconsole_la_CFLAGS = $(CONSOLE_CFLAGS)
+libconsole_la_LIBADD = $(CONSOLE_LIBS)
+libconsole_la_LDFLAGS = \
+	-version-info $(LIBCONSOLE_LTVERSION) \
 	-export-symbols-regex "^console_console_.*" \
 	@LIBTOOL_EXPORT_OPTIONS@ @LIBTOOL_FLAGS@
 
@@ -171,14 +172,14 @@ AM_CFLAGS = $(GLIB_CFLAGS) $(GOBJECT_CFLAGS)
 LDADD = $(GLIB_LIBS) $(GOBJECT_LIBS)
 
 reflect_text_view_CPPFLAGS = -DUSE_TEXT_VIEW
-reflect_text_view_CFLAGS = $(VTE_CFLAGS) $(X_CFLAGS)
+reflect_text_view_CFLAGS = $(CONSOLE_CFLAGS) $(X_CFLAGS)
 reflect_text_view_SOURCES = reflect.c
-reflect_text_view_LDADD = $(LIBS) $(VTE_LIBS) $(X_LIBS)
+reflect_text_view_LDADD = $(LIBS) $(CONSOLE_LIBS) $(X_LIBS)
 
-reflect_vte_CPPFLAGS = -DUSE_VTE
-reflect_vte_CFLAGS = $(VTE_CFLAGS) $(X_CFLAGS)
+reflect_vte_CPPFLAGS = -DUSE_CONSOLE
+reflect_vte_CFLAGS = $(CONSOLE_CFLAGS) $(X_CFLAGS)
 reflect_vte_SOURCES = reflect.c
-reflect_vte_LDADD = libvte.la $(LIBS) $(VTE_LIBS) $(X_LIBS)
+reflect_vte_LDADD = libconsole.la $(LIBS) $(CONSOLE_LIBS) $(X_LIBS)
 
 iso2022_SOURCES = \
 	buffer.c \
@@ -222,8 +223,8 @@ table_SOURCES = \
 	vteconv.c \
 	vteconv.h \
 table_CPPFLAGS = -DTABLE_MAIN
-table_CFLAGS = $(VTE_CFLAGS)
-table_LDADD = $(LIBS) $(VTE_LIBS)
+table_CFLAGS = $(CONSOLE_CFLAGS)
+table_LDADD = $(LIBS) $(CONSOLE_LIBS)
 
 trie_SOURCES = \
 	trie.c \
@@ -241,8 +242,8 @@ trie_SOURCES = \
 	vteconv.c \
 	vteconv.h
 trie_CPPFLAGS = -DTRIE_MAIN
-trie_CFLAGS = $(VTE_CFLAGS)
-trie_LDADD = $(LIBS) $(VTE_LIBS)
+trie_CFLAGS = $(CONSOLE_CFLAGS)
+trie_LDADD = $(LIBS) $(CONSOLE_LIBS)
 
 vterdb_CFLAGS = $(GTK_CFLAGS) $(X_CFLAGS) -DVTERDB_MAIN
 vterdb_SOURCES = vterdb.c
@@ -250,8 +251,8 @@ vterdb_LDADD = $(LDFLAGS) $(LIBS) $(GTK_LIBS)
 
 vteconv_SOURCES = buffer.c buffer.h debug.c debug.h vteconv.c vteconv.h
 vteconv_CPPFLAGS = -DVTECONV_MAIN
-vteconv_CFLAGS = $(VTE_CFLAGS)
-vteconv_LDADD = $(LIBS) $(VTE_LIBS)
+vteconv_CFLAGS = $(CONSOLE_CFLAGS)
+vteconv_LDADD = $(LIBS) $(CONSOLE_LIBS)
 
 buffer_SOURCES = buffer.c
 buffer_CPPFLAGS = -DBUFFER_MAIN

@@ -92,6 +92,6 @@ src/vtetypebuiltins.c
 src/vtetypebuiltins.h
 src/vteversion.h
 stamp-h1
-vte.pc
-vte-uninstalled.pc
+console.pc
+console-uninstalled.pc
 xmldocs.make
