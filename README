@@ -1,3 +1,17 @@
+* What is Console?
+
+Console is a GTK+ widget implementing terminal-like functionality for
+applications without pty interfaces. User input can be received by the app
+through a signal and results can be outputted directly. It can also be used
+where pty and termcap capabilities are not available.
+
+Most of Console's code was shamelessly copied from VTE. The work here was
+basically getting references to pty and termcap removed.
+
+The source code repo and other general directions for console can be found at:
+
+  http://github.com/thiagoarrais/console
+
 * What is VTE?
 
 VTE is a library (libvte) implementing a terminal emulator widget for GTK+,
