@@ -45,6 +45,7 @@ void console_controller_start_user_input(ConsoleController *controller);
 void console_controller_stop_user_input(ConsoleController *controller);
 
 void console_controller_set_command_prompt(ConsoleController *controller, const gchar *text);
+void console_controller_print_command_prompt(ConsoleController *controller);
 
 void console_controller_user_input(ConsoleController *controller, gchar *text);
 

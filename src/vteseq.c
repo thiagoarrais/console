@@ -2022,7 +2022,20 @@ vte_sequence_handler_ai (VteTerminal *terminal, GValueArray *params)
 static void
 vte_sequence_handler_ui (VteTerminal *terminal, GValueArray *params)
 {
+	console_controller_print_command_prompt(terminal->pvt->controller);
 	console_controller_start_user_input(terminal->pvt->controller);
+}
+
+static void
+vte_sequence_handler_turn_recording_on (VteTerminal *terminal, GValueArray *params)
+{
+	console_controller_start_user_input(terminal->pvt->controller);
+}
+
+static void
+vte_sequence_handler_turn_recording_off (VteTerminal *terminal, GValueArray *params)
+{
+	console_controller_stop_user_input(terminal->pvt->controller);
 }
 
 /* Cursor down, with scrolling. */

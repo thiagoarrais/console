@@ -34,13 +34,13 @@ console_console_new(void)
 void
 console_console_begin_app_output(Console *self)
 {
-	vte_terminal_feed(VTE_TERMINAL(self), "\033[O", 3);
+	vte_terminal_feed(VTE_TERMINAL(self), "\033[Q", 3);
 }
 
 void
 console_console_finish_app_output(Console *self)
 {
-	vte_terminal_feed(VTE_TERMINAL(self), "\033[N", 3);
+	vte_terminal_feed(VTE_TERMINAL(self), "\033[R", 3);
 }
 
 void

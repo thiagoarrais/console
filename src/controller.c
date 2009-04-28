@@ -107,7 +107,13 @@ console_controller_set_command_prompt(ConsoleController *ctrl, const gchar *text
 	ctrl->prompt_length = strlen(text);
 
 	if (ctrl->user_input_mode)
-		vte_terminal_feed(ctrl->terminal, text, ctrl->prompt_length);
+		console_controller_print_command_prompt(ctrl);
+}
+
+void
+console_controller_print_command_prompt(ConsoleController *ctrl)
+{
+	vte_terminal_feed(ctrl->terminal, ctrl->prompt, ctrl->prompt_length);
 }
 
 static void
@@ -181,7 +187,6 @@ console_controller_flush_pending_input(ConsoleController *ctrl)
 
 	console_controller_emit_line_received(ctrl->terminal, input_line, ctrl->input_length);
 	console_controller_reset_pending_input(ctrl);
-	vte_terminal_feed(ctrl->terminal, ctrl->prompt, ctrl->prompt_length);
 }
 
 void console_controller_cursor_left(ConsoleController *ctrl) {

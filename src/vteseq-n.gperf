@@ -127,6 +127,8 @@ struct vteseq_n_struct {
 "send-secondary-device-attributes", VTE_SEQUENCE_HANDLER(vte_sequence_handler_send_secondary_device_attributes)
 #"change-mouse-cursor-background-colors", VTE_SEQUENCE_HANDLER_NULL
 #"change-mouse-cursor-foreground-colors", VTE_SEQUENCE_HANDLER_NULL
+"turn-recording-on", VTE_SEQUENCE_HANDLER(vte_sequence_handler_turn_recording_on)
+"turn-recording-off", VTE_SEQUENCE_HANDLER(vte_sequence_handler_turn_recording_off) 
 "start-user-input", VTE_SEQUENCE_HANDLER(vte_sequence_handler_ui)
 "finish-user-input", VTE_SEQUENCE_HANDLER(vte_sequence_handler_ai)
 "command-history-previous", VTE_SEQUENCE_HANDLER(vte_sequence_handler_bk)
