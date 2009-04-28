@@ -71,4 +71,8 @@ void console_console_set_command_prompt(Console *self, const gchar *text);
 
 void console_console_feed(Console *self, const char *data, glong length);
 
+/* Functions inherited from VteTerminal that we need to reexport */
+void console_console_set_font_from_string(Console *self, const char *name);
+void console_console_set_mouse_autohide(Console *self, gboolean setting);
+
 #endif

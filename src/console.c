@@ -55,6 +55,18 @@ console_console_feed(Console *self, const char *data, glong length)
 	vte_terminal_feed(VTE_TERMINAL(self), data, length);
 }
 
+void
+console_console_set_font_from_string(Console *self, const char *name)
+{
+	vte_terminal_set_font_from_string(VTE_TERMINAL(self), name);
+}
+
+void
+console_console_set_mouse_autohide(Console *self, gboolean setting)
+{
+	vte_terminal_set_mouse_autohide(VTE_TERMINAL(self), setting);
+}
+
 static void
 console_console_dispose (GObject *gobject)
 {
