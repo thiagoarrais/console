@@ -114,6 +114,17 @@ slice_sprintnum(gchar **output, const gchar *format, const glong number)
 	return outputlen;
 }
 
+static void
+console_controller_sprint_and_feed(ConsoleController *self, const gchar *format, const glong number)
+{
+	gchar *cmdstr;
+	glong cmdlen;
+
+	cmdlen = slice_sprintnum(&cmdstr, format, number);
+	vte_terminal_feed(self->terminal, cmdstr, cmdlen);
+	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+}
+
 void
 console_controller_set_command_prompt(ConsoleController *ctrl, const gchar *text)
 {
@@ -124,20 +135,12 @@ console_controller_set_command_prompt(ConsoleController *ctrl, const gchar *text
 
 	if (ctrl->user_input_mode) {
 		InputNode *current_node;
-		VteTerminal *terminal;
-		gchar *cmdstr, *user_input;
-		glong i, cmdlen, inputlen;
+		gchar *user_input;
+		glong i, inputlen;
 		glong num_chars = ctrl->input_cursor_position + old_prompt_length;
 
-		terminal = ctrl->terminal;
-
-		cmdlen = slice_sprintnum(&cmdstr, "\033[O\033[%dD", num_chars);
-		vte_terminal_feed(terminal, cmdstr, cmdlen);
-		g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
-		
-		cmdlen = slice_sprintnum(&cmdstr, "\033[%dP", num_chars);
-		vte_terminal_feed(terminal, cmdstr, cmdlen);
-		g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+		console_controller_sprint_and_feed(ctrl, "\033[O\033[%dD", num_chars);
+		console_controller_sprint_and_feed(ctrl, "\033[%dP", num_chars);
 
 		console_controller_print_command_prompt(ctrl);
 
@@ -151,15 +154,13 @@ console_controller_set_command_prompt(ConsoleController *ctrl, const gchar *text
 		}
 		user_input[i] = '\0';
 
-		vte_terminal_feed(terminal, user_input, inputlen);
+		vte_terminal_feed(ctrl->terminal, user_input, inputlen);
 		g_slice_free1(inputlen * sizeof(gchar), user_input);
 
-		if (ctrl->input_length > ctrl->input_cursor_position) {
-			cmdlen = slice_sprintnum(&cmdstr, "\033[%dD", ctrl->input_length - ctrl->input_cursor_position);
-			vte_terminal_feed(terminal, cmdstr, cmdlen);
-			g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
-		}
-		vte_terminal_feed(terminal, "\033[N", 3);
+		if (ctrl->input_length > ctrl->input_cursor_position)
+			console_controller_sprint_and_feed(ctrl, "\033[%dD", ctrl->input_length - ctrl->input_cursor_position);
+
+		vte_terminal_feed(ctrl->terminal, "\033[N", 3);
 	}
 }
 
@@ -333,13 +334,8 @@ console_controller_clear_input(ConsoleController *ctrl)
 
 	if (ctrl->input_cursor_position == 0) return;
 
-	cmdlen = slice_sprintnum(&cmdstr, "\033[O\033[%dD", ctrl->input_cursor_position);
-	vte_terminal_feed(ctrl->terminal, cmdstr, cmdlen);
-	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
-
-	cmdlen = slice_sprintnum(&cmdstr, "\033[%dP\033[0J\033[N", ctrl->input_cursor_position);
-	vte_terminal_feed(ctrl->terminal, cmdstr, cmdlen);
-	g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+	console_controller_sprint_and_feed(ctrl, "\033[O\033[%dD", ctrl->input_cursor_position);
+	console_controller_sprint_and_feed(ctrl, "\033[%dP\033[0J\033[N", ctrl->input_cursor_position);
 
 	console_controller_reset_pending_input(ctrl);
 }
