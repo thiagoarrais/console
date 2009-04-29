@@ -100,14 +100,67 @@ console_controller_start_user_input(ConsoleController *controller)
 	controller->user_input_mode = TRUE;
 }
 
+static glong
+slice_sprintnum(gchar **output, const gchar *format, const glong number)
+{
+	glong outputlen = strlen(format); //strlen - 1 (for the '%' sign) + 1 (for the null terminator)
+	glong tmplen = number;
+	while((tmplen = tmplen / 10) > 0) outputlen++;
+
+	*output = (gchar*) g_slice_alloc(outputlen * sizeof(gchar));
+
+	g_sprintf(*output, format, number);
+
+	return outputlen;
+}
+
 void
 console_controller_set_command_prompt(ConsoleController *ctrl, const gchar *text)
 {
+	glong old_prompt_length = ctrl->prompt_length;
+
 	ctrl->prompt = g_strdup(text);
 	ctrl->prompt_length = strlen(text);
 
-	if (ctrl->user_input_mode)
+	if (ctrl->user_input_mode) {
+		InputNode *current_node;
+		VteTerminal *terminal;
+		gchar *cmdstr, *user_input;
+		glong i, cmdlen, inputlen;
+		glong num_chars = ctrl->input_cursor_position + old_prompt_length;
+
+		terminal = ctrl->terminal;
+
+		cmdlen = slice_sprintnum(&cmdstr, "\033[O\033[%dD", num_chars);
+		vte_terminal_feed(terminal, cmdstr, cmdlen);
+		g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+		
+		cmdlen = slice_sprintnum(&cmdstr, "\033[%dP", num_chars);
+		vte_terminal_feed(terminal, cmdstr, cmdlen);
+		g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+
 		console_controller_print_command_prompt(ctrl);
+
+		inputlen = ctrl->input_length + 1;
+		user_input = (gchar*) g_slice_alloc(inputlen * sizeof(gchar));
+		i = 0;
+		current_node = ctrl->input_head;
+		while(current_node) {
+			user_input[i++] = current_node->charData;
+			current_node = current_node->next;
+		}
+		user_input[i] = '\0';
+
+		vte_terminal_feed(terminal, user_input, inputlen);
+		g_slice_free1(inputlen * sizeof(gchar), user_input);
+
+		if (ctrl->input_length > ctrl->input_cursor_position) {
+			cmdlen = slice_sprintnum(&cmdstr, "\033[%dD", ctrl->input_length - ctrl->input_cursor_position);
+			vte_terminal_feed(terminal, cmdstr, cmdlen);
+			g_slice_free1(cmdlen * sizeof(gchar), cmdstr);
+		}
+		vte_terminal_feed(terminal, "\033[N", 3);
+	}
 }
 
 void
@@ -205,20 +258,6 @@ void console_controller_cursor_right(ConsoleController *ctrl) {
 	else console_controller_store_input(ctrl, (gchar*) " ", 1);
 
 	ctrl->input_cursor_position++;
-}
-
-static glong
-slice_sprintnum(gchar **output, const gchar *format, const glong number)
-{
-	glong outputlen = strlen(format); //strlen - 1 (for the '%' sign) + 1 (for the null terminator)
-	glong tmplen = number;
-	while((tmplen = tmplen / 10) > 0) outputlen++;
-
-	*output = (gchar*) g_slice_alloc(outputlen * sizeof(gchar));
-
-	g_sprintf(*output, format, number);
-
-	return outputlen;
 }
 
 static void
