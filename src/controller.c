@@ -34,7 +34,7 @@ console_controller_new(VteTerminal *terminal)
 	ConsoleController *controller = g_slice_new0(ConsoleController);
 
 	controller->terminal = terminal;
-	controller->user_input_mode = TRUE;
+	controller->user_input_mode = 0;
 	console_controller_reset_pending_input(controller);
 
 	return controller;
@@ -91,13 +91,13 @@ console_controller_emit_line_received(VteTerminal *terminal, const gchar *text, 
 void
 console_controller_stop_user_input(ConsoleController *controller)
 {
-	controller->user_input_mode = FALSE;
+	controller->user_input_mode++;
 }
 
 void
 console_controller_start_user_input(ConsoleController *controller)
 {
-	controller->user_input_mode = TRUE;
+	controller->user_input_mode--;
 }
 
 static glong
@@ -133,7 +133,7 @@ console_controller_set_command_prompt(ConsoleController *ctrl, const gchar *text
 	ctrl->prompt = g_strdup(text);
 	ctrl->prompt_length = strlen(text);
 
-	if (ctrl->user_input_mode) {
+	if (0 == ctrl->user_input_mode) {
 		InputNode *current_node;
 		gchar *user_input;
 		glong i, inputlen;
@@ -167,7 +167,8 @@ console_controller_set_command_prompt(ConsoleController *ctrl, const gchar *text
 void
 console_controller_print_command_prompt(ConsoleController *ctrl)
 {
-	vte_terminal_feed(ctrl->terminal, ctrl->prompt, ctrl->prompt_length);
+	if (0 == ctrl->user_input_mode)
+		vte_terminal_feed(ctrl->terminal, ctrl->prompt, ctrl->prompt_length);
 }
 
 static void
@@ -176,7 +177,7 @@ console_controller_store_input(ConsoleController *ctrl, gchar *text, glong lengt
 	glong i;
 	InputNode *current_node, *last_node;
 
-	if (!ctrl->user_input_mode) return;
+	if (0 != ctrl->user_input_mode) return;
 
 	last_node = ctrl->input_cursor;
   	for(i = 0; i < length; ++i) {
@@ -205,7 +206,7 @@ console_controller_flush_pending_input(ConsoleController *ctrl)
 	InputNode *current_node;
 	VteCommandHistoryNode *cmd;
 
-	if (!ctrl->user_input_mode) return;
+	if (0 != ctrl->user_input_mode) return;
 
 	input_line = (gchar*) g_slice_alloc((ctrl->input_length + 1) * sizeof(gchar));
 
@@ -244,7 +245,7 @@ console_controller_flush_pending_input(ConsoleController *ctrl)
 }
 
 void console_controller_cursor_left(ConsoleController *ctrl) {
-	if (ctrl->user_input_mode) {
+	if (0 != ctrl->user_input_mode) {
 		ctrl->input_cursor = ctrl->input_cursor->previous;
 		if (ctrl->input_cursor_position > 0) ctrl->input_cursor_position--;
 	}
@@ -253,7 +254,7 @@ void console_controller_cursor_left(ConsoleController *ctrl) {
 void console_controller_cursor_right(ConsoleController *ctrl) {
 	InputNode *cursor = ctrl->input_cursor;
 
-	if (!ctrl->user_input_mode) return;
+	if (0 != ctrl->user_input_mode) return;
 
 	if (cursor->next) ctrl->input_cursor = cursor->next;
 	else console_controller_store_input(ctrl, (gchar*) " ", 1);
@@ -300,7 +301,7 @@ void console_controller_delete_current_char(ConsoleController *ctrl)
 {
 	InputNode *deleted_node = ctrl->input_cursor->next;
 
-	if (!ctrl->user_input_mode) return;
+	if (0 != ctrl->user_input_mode) return;
 
 	if (deleted_node) {
 		--ctrl->input_length;

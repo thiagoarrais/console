@@ -35,7 +35,7 @@ typedef struct ConsoleController {
 	glong prompt_length;
 
 	/* Is the data being fed by the user or by the app? */
-	gboolean user_input_mode;
+	glong user_input_mode;
 } ConsoleController;
 
 ConsoleController *console_controller_new(VteTerminal *terminal);
