@@ -245,7 +245,7 @@ console_controller_flush_pending_input(ConsoleController *ctrl)
 }
 
 void console_controller_cursor_left(ConsoleController *ctrl) {
-	if (0 != ctrl->user_input_mode) {
+	if (0 == ctrl->user_input_mode) {
 		ctrl->input_cursor = ctrl->input_cursor->previous;
 		if (ctrl->input_cursor_position > 0) ctrl->input_cursor_position--;
 	}
