@@ -256,10 +256,12 @@ void console_controller_cursor_right(ConsoleController *ctrl) {
 
 	if (0 != ctrl->user_input_mode) return;
 
-	if (cursor->next) ctrl->input_cursor = cursor->next;
-	else console_controller_store_input(ctrl, (gchar*) " ", 1);
-
-	ctrl->input_cursor_position++;
+	if (cursor->next) {
+		ctrl->input_cursor = cursor->next;
+		ctrl->input_cursor_position++;
+	} else {
+		console_controller_store_input(ctrl, (gchar*) " ", 1);
+	}
 }
 
 static void
